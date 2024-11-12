@@ -439,13 +439,13 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Werror-implicit-function-declaration \
 		   -Werror=return-type -Wno-format-security \
-		   -std=gnu89
-KBUILD_CPPFLAGS := -D__KERNEL__
-KBUILD_AFLAGS_KERNEL :=
-KBUILD_CFLAGS_KERNEL :=
-KBUILD_AFLAGS_MODULE  := -DMODULE
-KBUILD_CFLAGS_MODULE  := -DMODULE
-KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
+		   -std=gnu89 -fPIC
+KBUILD_CPPFLAGS := -D__KERNEL__ -fPIC
+KBUILD_AFLAGS_KERNEL := -fPIC
+KBUILD_CFLAGS_KERNEL := -fPIC
+KBUILD_AFLAGS_MODULE  := -DMODULE -fPIC
+KBUILD_CFLAGS_MODULE  := -DMODULE -fPIC
+KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds -fPIC
 KBUILD_LDFLAGS :=
 GCC_PLUGINS_CFLAGS :=
 CLANG_FLAGS :=

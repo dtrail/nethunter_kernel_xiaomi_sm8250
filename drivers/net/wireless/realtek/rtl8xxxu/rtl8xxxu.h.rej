@@ -1,0 +1,88 @@
+--- drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu.h
++++ drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu.h
+@@ -1,15 +1,7 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
+ /*
+  * Copyright (c) 2014 - 2017 Jes Sorensen <Jes.Sorensen@gmail.com>
+  *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms of version 2 of the GNU General Public License as
+- * published by the Free Software Foundation.
+- *
+- * This program is distributed in the hope that it will be useful, but WITHOUT
+- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+- * more details.
+- *
+  * Register definitions taken from original Realtek rtl8723au driver
+  */
+ 
+@@ -43,6 +35,7 @@
+ #define REALTEK_USB_CMD_IDX		0x00
+ 
+ #define TX_TOTAL_PAGE_NUM		0xf8
++#define TX_TOTAL_PAGE_NUM_8188E		0xa9
+ #define TX_TOTAL_PAGE_NUM_8192E		0xf3
+ #define TX_TOTAL_PAGE_NUM_8723B		0xf7
+ /* (HPQ + LPQ + NPQ + PUBQ) = TX_TOTAL_PAGE_NUM */
+@@ -51,6 +44,11 @@
+ #define TX_PAGE_NUM_LO_PQ		0x02
+ #define TX_PAGE_NUM_NORM_PQ		0x02
+ 
++#define TX_PAGE_NUM_PUBQ_8188E		0x47
++#define TX_PAGE_NUM_HI_PQ_8188E		0x29
++#define TX_PAGE_NUM_LO_PQ_8188E		0x1c
++#define TX_PAGE_NUM_NORM_PQ_8188E	0x1c
++
+ #define TX_PAGE_NUM_PUBQ_8192E		0xe7
+ #define TX_PAGE_NUM_HI_PQ_8192E		0x08
+ #define TX_PAGE_NUM_LO_PQ_8192E		0x0c
+@@ -155,7 +153,8 @@ struct rtl8xxxu_rxdesc16 {
+ 	u32 htc:1;
+ 	u32 eosp:1;
+ 	u32 bssidfit:2;
+-	u32 reserved1:16;
++	u32 rpt_sel:2;		/* 8188e */
++	u32 reserved1:14;
+ 	u32 unicastwake:1;
+ 	u32 magicwake:1;
+ 
+@@ -213,7 +212,8 @@ struct rtl8xxxu_rxdesc16 {
+ 
+ 	u32 magicwake:1;
+ 	u32 unicastwake:1;
+-	u32 reserved1:16;
++	u32 reserved1:14;
++	u32 rpt_sel:2;		/* 8188e */
+ 	u32 bssidfit:2;
+ 	u32 eosp:1;
+ 	u32 htc:1;
+@@ -504,6 +504,8 @@ struct rtl8xxxu_txdesc40 {
+ #define TXDESC_AMPDU_DENSITY_SHIFT	20
+ #define TXDESC40_BT_INT			BIT(23)
+ #define TXDESC40_GID_SHIFT		24
++#define TXDESC_ANTENNA_SELECT_A		BIT(24)
++#define TXDESC_ANTENNA_SELECT_B		BIT(25)
+ 
+ /* Word 3 */
+ #define TXDESC40_USE_DRIVER_RATE	BIT(8)
+@@ -548,6 +550,10 @@ struct rtl8xxxu_txdesc40 {
+ 
+ /* Word 6 */
+ #define TXDESC_MAX_AGG_SHIFT		11
++#define TXDESC_USB_TX_AGG_SHIT		24
++
++/* Word 7 */
++#define TXDESC_ANTENNA_SELECT_C		BIT(29)
+ 
+ /* Word 8 */
+ #define TXDESC40_HW_SEQ_ENABLE		BIT(15)
+@@ -635,7 +641,7 @@ struct rtl8xxxu_firmware_header {
+ 	u32	reserved4;
+ 	u32	reserved5;
+ 
+-	u8	data[0];
++	u8	data[];
+ };
+ 
+ /*
