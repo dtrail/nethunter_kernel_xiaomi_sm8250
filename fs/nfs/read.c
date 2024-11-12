@@ -354,35 +354,35 @@ struct nfs_readdesc {
 };
 
 static int
-readpage_async_filler(struct file *data, struct page *page)
+readpage_async_filler(void *data, struct page *page)
 {
-	struct nfs_readdesc *desc = (struct nfs_readdesc *)data;
-	struct nfs_page *new;
-	unsigned int len;
-	int error;
+    struct nfs_readdesc *desc = (struct nfs_readdesc *)data;
+    struct nfs_page *new;
+    unsigned int len;
+    int error;
 
-	len = nfs_page_length(page);
-	if (len == 0)
-		return nfs_return_empty_page(page);
+    len = nfs_page_length(page);
+    if (len == 0)
+        return nfs_return_empty_page(page);
 
-	new = nfs_create_request(desc->ctx, page, NULL, 0, len);
-	if (IS_ERR(new))
-		goto out_error;
+    new = nfs_create_request(desc->ctx, page, NULL, 0, len);
+    if (IS_ERR(new))
+        goto out_error;
 
-	if (len < PAGE_SIZE)
-		zero_user_segment(page, len, PAGE_SIZE);
-	if (!nfs_pageio_add_request(desc->pgio, new)) {
-		nfs_list_remove_request(new);
-		nfs_readpage_release(new);
-		error = desc->pgio->pg_error;
-		goto out;
-	}
-	return 0;
+    if (len < PAGE_SIZE)
+        zero_user_segment(page, len, PAGE_SIZE);
+    if (!nfs_pageio_add_request(desc->pgio, new)) {
+        nfs_list_remove_request(new);
+        nfs_readpage_release(new);
+        error = desc->pgio->pg_error;
+        goto out;
+    }
+    return 0;
 out_error:
-	error = PTR_ERR(new);
-	unlock_page(page);
+    error = PTR_ERR(new);
+    unlock_page(page);
 out:
-	return error;
+    return error;
 }
 
 int nfs_readpages(struct file *filp, struct address_space *mapping,
