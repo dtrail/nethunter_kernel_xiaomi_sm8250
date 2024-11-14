@@ -1595,8 +1595,6 @@ void rtl8xxxu_fill_txdesc_v3(struct ieee80211_hw *hw, struct ieee80211_hdr *hdr,
 			     struct rtl8xxxu_txdesc32 *tx_desc32, bool sgi,
 			     bool short_preamble, bool ampdu_enable,
 			     u32 rts_rate);
-void rtl8723bu_set_ps_tdma(struct rtl8xxxu_priv *priv,
-			   u8 arg1, u8 arg2, u8 arg3, u8 arg4, u8 arg5);
  
 extern struct rtl8xxxu_fileops rtl8188eu_fops;
 extern struct rtl8xxxu_fileops rtl8192cu_fops;

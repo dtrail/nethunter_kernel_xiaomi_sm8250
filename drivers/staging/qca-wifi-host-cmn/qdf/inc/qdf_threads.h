@@ -44,7 +44,7 @@ void qdf_busy_wait(uint32_t us_interval);
  *
  * Return: none
  */
-void qdf_set_wake_up_idle(bool idle);
+/* void qdf_set_wake_up_idle(bool idle); */
 
 /**
  * qdf_set_user_nice() - set thread's nice value

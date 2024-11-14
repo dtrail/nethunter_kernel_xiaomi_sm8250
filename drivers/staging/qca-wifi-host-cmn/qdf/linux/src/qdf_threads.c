@@ -106,7 +106,7 @@ void qdf_busy_wait(uint32_t us_interval)
 }
 qdf_export_symbol(qdf_busy_wait);
 
-qdf_export_symbol(qdf_set_wake_up_idle);
+/* qdf_export_symbol(qdf_set_wake_up_idle); */
 
 void qdf_set_user_nice(qdf_thread_t *thread, long nice)
 {
