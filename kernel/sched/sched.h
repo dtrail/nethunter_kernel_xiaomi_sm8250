@@ -630,7 +630,6 @@ struct cfs_rq {
 	unsigned int		idle_nr_running;   /* SCHED_IDLE */
 >>>>>>> c2a295bffeaf94 (sched/fair: Add new cfs_rq.h_nr_runnable)
 	unsigned int		idle_h_nr_running; /* SCHED_IDLE */
-	unsigned int		h_nr_delayed;
 
 	s64			avg_vruntime;
 	u64			avg_load;
