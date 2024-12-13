@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #define _RTL8188E_XMIT_C_
 
 #include <drv_types.h>
@@ -389,6 +384,11 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz , u8 ba
 
 				data_rate = 0x13; /* default rate: MCS7 */
 			}
+			if (bmcst) {
+				data_rate = MRateToHwRate(pattrib->rate);
+				ptxdesc->txdw4 |= cpu_to_le32(USERATE);
+				ptxdesc->txdw4 |= cpu_to_le32(DISDATAFB);
+			}
 
 			if (padapter->fix_rate != 0xFF) {
 				data_rate = padapter->fix_rate;
@@ -525,7 +525,8 @@ static s32 update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem, s32 sz , u8 ba
 	}
 
 #ifdef CONFIG_ANTENNA_DIVERSITY
-	odm_set_tx_ant_by_tx_info(&pHalData->odmpriv, pmem, pattrib->mac_id);
+	if (!bmcst && pattrib->psta)
+		odm_set_tx_ant_by_tx_info(adapter_to_phydm(padapter), pmem, pattrib->psta->cmn.mac_id);
 #endif
 
 	rtl8188eu_cal_txdesc_chksum(ptxdesc);
@@ -560,6 +561,10 @@ s32 rtl8188eu_xmit_buf_handler(PADAPTER padapter)
 		return _FAIL;
 	}
 	if (RTW_CANNOT_RUN(padapter)) {
+		RTW_DBG(FUNC_ADPT_FMT "- bDriverStopped(%s) bSurpriseRemoved(%s)\n",
+			FUNC_ADPT_ARG(padapter),
+			rtw_is_drv_stopped(padapter) ? "True" : "False",
+			rtw_is_surprise_removed(padapter) ? "True" : "False");
 			 return _FAIL;
 	}
 
@@ -671,24 +676,6 @@ static s32 rtw_dump_xframe(_adapter *padapter, struct xmit_frame *pxmitframe)
 }
 
 #ifdef CONFIG_USB_TX_AGGREGATION
-static u32 xmitframe_need_length(struct xmit_frame *pxmitframe)
-{
-	struct pkt_attrib *pattrib = &pxmitframe->attrib;
-
-	u32	len = 0;
-
-	/* no consider fragement */
-	len = pattrib->hdrlen + pattrib->iv_len +
-	      SNAP_SIZE + sizeof(u16) +
-	      pattrib->pktlen +
-	      ((pattrib->bswenc) ? pattrib->icv_len : 0);
-
-	if (pattrib->encrypt == _TKIP_)
-		len += 8;
-
-	return len;
-}
-
 #define IDEA_CONDITION 1	/* check all packets before enqueue */
 s32 rtl8188eu_xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv, struct xmit_buf *pxmitbuf)
 {
@@ -784,7 +771,7 @@ s32 rtl8188eu_xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv
 
 	/* 3 2. aggregate same priority and same DA(AP or STA) frames */
 	pfirstframe = pxmitframe;
-	len = xmitframe_need_length(pfirstframe) + TXDESC_SIZE + (pfirstframe->pkt_offset * PACKET_OFFSET_SZ);
+	len = rtw_wlan_pkt_size(pfirstframe) + TXDESC_SIZE + (pfirstframe->pkt_offset * PACKET_OFFSET_SZ);
 	pbuf_tail = len;
 	pbuf = _RND8(pbuf_tail);
 
@@ -862,7 +849,7 @@ s32 rtl8188eu_xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv
 		pxmitframe->pkt_offset = 0; /* not first frame of aggregation, no need to reserve offset */
 #endif
 
-		len = xmitframe_need_length(pxmitframe) + TXDESC_SIZE + (pxmitframe->pkt_offset * PACKET_OFFSET_SZ);
+		len = rtw_wlan_pkt_size(pxmitframe) + TXDESC_SIZE + (pxmitframe->pkt_offset * PACKET_OFFSET_SZ);
 
 		if (_RND8(pbuf + len) > MAX_XMITBUF_SZ)
 			/* if (_RND8(pbuf + len) > (MAX_XMITBUF_SZ/2))//to do : for TX TP finial tune , Georgia 2012-0323 */

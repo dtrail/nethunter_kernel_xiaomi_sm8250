@@ -1,22 +1,17 @@
 /******************************************************************************
-*
-* Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
-*
-* This program is free software; you can redistribute it and/or modify it
-* under the terms of version 2 of the GNU General Public License as
-* published by the Free Software Foundation.
-*
-* This program is distributed in the hope that it will be useful, but WITHOUT
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
-* more details.
-*
-* You should have received a copy of the GNU General Public License along with
-* this program; if not, write to the Free Software Foundation, Inc.,
-* 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
-*
-*
-******************************************************************************/
+ *
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ *****************************************************************************/
 
 /*Image2HeaderVersion: 2.18*/
 #if (RTL8188E_SUPPORT == 1)
@@ -30,7 +25,7 @@
 
 void
 odm_read_and_config_mp_8188e_radioa(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_radioa(void);
 
@@ -40,7 +35,7 @@ u32 odm_get_version_mp_8188e_radioa(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_ap(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_ap(void);
 
@@ -50,7 +45,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_ap(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_pcie(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_pcie(void);
 
@@ -60,7 +55,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_pcie(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_pcie_icut(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_pcie_icut(void);
 
@@ -70,7 +65,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_pcie_icut(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_sdio(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_sdio(void);
 
@@ -80,7 +75,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_sdio(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_sdio_icut(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_sdio_icut(void);
 
@@ -90,7 +85,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_sdio_icut(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_usb(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_usb(void);
 
@@ -100,7 +95,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_usb(void);
 
 void
 odm_read_and_config_mp_8188e_txpowertrack_usb_icut(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpowertrack_usb_icut(void);
 
@@ -110,7 +105,7 @@ u32 odm_get_version_mp_8188e_txpowertrack_usb_icut(void);
 
 void
 odm_read_and_config_mp_8188e_txpwr_lmt(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpwr_lmt(void);
 
@@ -120,7 +115,7 @@ u32 odm_get_version_mp_8188e_txpwr_lmt(void);
 
 void
 odm_read_and_config_mp_8188e_txpwr_lmt_88e_e_m2_for_msi(/* TC: Test Chip, MP: MP Chip*/
-	struct PHY_DM_STRUCT  *p_dm_odm
+	struct dm_struct  *dm
 );
 u32 odm_get_version_mp_8188e_txpwr_lmt_88ee_m2_for_msi(void);
 

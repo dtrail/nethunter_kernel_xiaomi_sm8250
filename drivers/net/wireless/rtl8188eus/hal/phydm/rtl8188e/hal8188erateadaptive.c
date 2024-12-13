@@ -1,19 +1,17 @@
-/*++
-Copyright (c) Realtek Semiconductor Corp. All rights reserved.
-
-Module Name:
-	rate_adaptive.c
-
-Abstract:
-	Implement rate Adaptive functions for common operations.
-
-Major Change History:
-	When       Who               What
-	---------- ---------------   -------------------------------
-	2011-08-12 Page            Create.
-	2015-04-23 Wilson		   Fine tune (SD9 Family)
-
---*/
+/******************************************************************************
+ *
+ * Copyright(c) Semiconductor - 2017 Realtek Corporation.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ *****************************************************************************/
 #include "mp_precomp.h"
 
 #include "../phydm_precomp.h"
@@ -226,11 +224,11 @@ static u16 dynamic_tx_rpt_timing[6] = {0x186a, 0x30d4, 0x493e, 0x61a8, 0x7a12, 0
 	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
 static int
 odm_ra_learn_bounding(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	struct _odm_ra_info_	*p_ra_info
 )
 {
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, (" odm_ra_learn_bounding\n"));
+	PHYDM_DBG(dm, DBG_RA, " odm_ra_learn_bounding\n");
 	if (DM_RA_RATE_UP != p_ra_info->rate_direction) {
 		/* Check if previous RA adjustment trend as +++--- or ++++----*/
 		if (((3 == p_ra_info->rate_up_counter && p_ra_info->bounding_learning_time <= 10)
@@ -291,7 +289,7 @@ odm_ra_learn_bounding(
 
 static void
 odm_set_tx_rpt_timing_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	struct _odm_ra_info_	*p_ra_info,
 	u8				extend
 )
@@ -314,30 +312,30 @@ odm_set_tx_rpt_timing_8188e(
 	}
 	p_ra_info->rpt_time = dynamic_tx_rpt_timing[idx];
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("p_ra_info->rpt_time=0x%x\n", p_ra_info->rpt_time));
+	PHYDM_DBG(dm, DBG_RA, "p_ra_info->rpt_time=0x%x\n", p_ra_info->rpt_time);
 }
 
 static int
 odm_rate_down_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	struct _odm_ra_info_  *p_ra_info
 )
 {
 	u8 rate_id, lowest_rate, highest_rate;
 	s8 i;
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("=====>odm_rate_down_8188e()\n"));
+	PHYDM_DBG(dm, DBG_RA, "=====>odm_rate_down_8188e()\n");
 	if (NULL == p_ra_info) {
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("odm_rate_down_8188e(): p_ra_info is NULL\n"));
+		PHYDM_DBG(dm, DBG_RA, "odm_rate_down_8188e(): p_ra_info is NULL\n");
 		return -1;
 	}
 	rate_id = p_ra_info->pre_rate;
 	lowest_rate = p_ra_info->lowest_rate;
 	highest_rate = p_ra_info->highest_rate;
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-		(" rate_id=%d lowest_rate=%d highest_rate=%d rate_sgi=%d\n",
-		      rate_id, lowest_rate, highest_rate, p_ra_info->rate_sgi));
+	PHYDM_DBG(dm, DBG_RA,
+		" rate_id=%d lowest_rate=%d highest_rate=%d rate_sgi=%d\n",
+		      rate_id, lowest_rate, highest_rate, p_ra_info->rate_sgi);
 	if (rate_id > highest_rate)
 		rate_id = highest_rate;
 	else if (p_ra_info->rate_sgi)
@@ -402,33 +400,33 @@ rate_down_finish:
 		p_ra_info->ra_pending_counter = 4;
 	p_ra_info->ra_drop_after_down = 1;
 	p_ra_info->decision_rate = rate_id;
-	odm_set_tx_rpt_timing_8188e(p_dm_odm, p_ra_info, 2);
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("rate down, Decrease RPT Timing\n"));
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("ra_waiting_counter %d, ra_pending_counter %d RADrop %d", p_ra_info->ra_waiting_counter, p_ra_info->ra_pending_counter, p_ra_info->ra_drop_after_down));
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("rate down to rate_id %d rate_sgi %d\n", rate_id, p_ra_info->rate_sgi));
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("<=====odm_rate_down_8188e()\n"));
+	odm_set_tx_rpt_timing_8188e(dm, p_ra_info, 2);
+	PHYDM_DBG(dm, DBG_RA, "rate down, Decrease RPT Timing\n");
+	PHYDM_DBG(dm, DBG_RA, "ra_waiting_counter %d, ra_pending_counter %d RADrop %d", p_ra_info->ra_waiting_counter, p_ra_info->ra_pending_counter, p_ra_info->ra_drop_after_down);
+	PHYDM_DBG(dm, DBG_RA, "rate down to rate_id %d rate_sgi %d\n", rate_id, p_ra_info->rate_sgi);
+	PHYDM_DBG(dm, DBG_RA, "<=====odm_rate_down_8188e()\n");
 	return 0;
 }
 
 static int
 odm_rate_up_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	struct _odm_ra_info_  *p_ra_info
 )
 {
 	u8 rate_id, highest_rate;
 	u8 i;
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("=====>odm_rate_up_8188e()\n"));
+	PHYDM_DBG(dm, DBG_RA, "=====>odm_rate_up_8188e()\n");
 	if (NULL == p_ra_info) {
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("odm_rate_up_8188e(): p_ra_info is NULL\n"));
+		PHYDM_DBG(dm, DBG_RA, "odm_rate_up_8188e(): p_ra_info is NULL\n");
 		return -1;
 	}
 	rate_id = p_ra_info->pre_rate;
 	highest_rate = p_ra_info->highest_rate;
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-		     (" rate_id=%d highest_rate=%d\n",
-		      rate_id, highest_rate));
+	PHYDM_DBG(dm, DBG_RA,
+		     " rate_id=%d highest_rate=%d\n",
+		      rate_id, highest_rate);
 	if (p_ra_info->ra_waiting_counter == 1) {
 		p_ra_info->ra_waiting_counter = 0;
 		p_ra_info->ra_pending_counter = 0;
@@ -440,15 +438,15 @@ odm_rate_up_8188e(
 #endif
 		goto rate_up_finish;
 	}
-	odm_set_tx_rpt_timing_8188e(p_dm_odm, p_ra_info, 0);
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("odm_rate_up_8188e(): default RPT Timing\n"));
+	odm_set_tx_rpt_timing_8188e(dm, p_ra_info, 0);
+	PHYDM_DBG(dm, DBG_RA, "odm_rate_up_8188e(): default RPT Timing\n");
 
 	if (rate_id < highest_rate) {
 		for (i = rate_id + 1; i <= highest_rate; i++) {
 			if (p_ra_info->ra_use_rate & BIT(i)) {
 #if (DM_ODM_SUPPORT_TYPE == ODM_AP) && \
 	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
-				if (odm_ra_learn_bounding(p_dm_odm, p_ra_info)) {
+				if (odm_ra_learn_bounding(dm, p_ra_info)) {
 					p_ra_info->ra_waiting_counter = 2;
 					p_ra_info->ra_pending_counter = 1;
 					goto rate_up_finish;
@@ -485,9 +483,9 @@ rate_up_finish:
 		p_ra_info->ra_waiting_counter++;
 
 	p_ra_info->decision_rate = rate_id;
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("rate up to rate_id %d\n", rate_id));
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("ra_waiting_counter %d, ra_pending_counter %d", p_ra_info->ra_waiting_counter, p_ra_info->ra_pending_counter));
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("<=====odm_rate_up_8188e()\n"));
+	PHYDM_DBG(dm, DBG_RA, "rate up to rate_id %d\n", rate_id);
+	PHYDM_DBG(dm, DBG_RA, "ra_waiting_counter %d, ra_pending_counter %d", p_ra_info->ra_waiting_counter, p_ra_info->ra_pending_counter);
+	PHYDM_DBG(dm, DBG_RA, "<=====odm_rate_up_8188e()\n");
 	return 0;
 }
 
@@ -501,24 +499,25 @@ static void odm_reset_ra_counter_8188e(struct _odm_ra_info_  *p_ra_info)
 
 static void
 odm_rate_decision_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
-	struct _odm_ra_info_  *p_ra_info
+	struct dm_struct		*dm,
+	struct _odm_ra_info_	*p_ra_info,
+	u8	mac_id
 )
 {
 	u8 rate_id = 0, rty_pt_id = 0, penalty_id1 = 0, penalty_id2 = 0;
-	/* u32 pool_retry; */
 	static u8 dynamic_tx_rpt_timing_counter = 0;
+	u8	cmd_buf[3];
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("=====>odm_rate_decision_8188e()\n"));
+	PHYDM_DBG(dm, DBG_RA, "%s ======>\n", __func__);
 
 	if (p_ra_info->active && (p_ra_info->TOTAL > 0)) { /* STA used and data packet exits */
-#if (DM_ODM_SUPPORT_TYPE == ODM_AP) && \
-	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
+		
+		#if	AP_USB_SDIO
 		if (((p_ra_info->rssi_sta_ra <= 17) && (p_ra_info->rssi_sta_ra > p_ra_info->pre_rssi_sta_ra))
-		    || ((p_ra_info->pre_rssi_sta_ra <= 17) && (p_ra_info->pre_rssi_sta_ra > p_ra_info->rssi_sta_ra))) {
+			|| ((p_ra_info->pre_rssi_sta_ra <= 17) && (p_ra_info->pre_rssi_sta_ra > p_ra_info->rssi_sta_ra))) {
 			/* don't reset state in low signal due to the power different between CCK and MCS is large.*/
 		} else
-#endif
+		#endif
 			if (p_ra_info->ra_drop_after_down) {
 				p_ra_info->ra_drop_after_down--;
 				odm_reset_ra_counter_8188e(p_ra_info);
@@ -528,41 +527,42 @@ odm_rate_decision_8188e(
 			p_ra_info->pre_rssi_sta_ra = p_ra_info->rssi_sta_ra;
 			p_ra_info->ra_waiting_counter = 0;
 			p_ra_info->ra_pending_counter = 0;
-#if (DM_ODM_SUPPORT_TYPE == ODM_AP) && \
-	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
+			#if AP_USB_SDIO
 			p_ra_info->bounding_type = 0;
-#endif
+			#endif
 		}
 
-#if (DM_ODM_SUPPORT_TYPE & ODM_AP)
-		if (0xff != p_dm_odm->priv->pshare->rf_ft_var.txforce) {
-			p_ra_info->pre_rate = p_dm_odm->priv->pshare->rf_ft_var.txforce;
+		#if (DM_ODM_SUPPORT_TYPE & ODM_AP)
+		if (dm->priv->pshare->rf_ft_var.txforce != 0xff) {
+			p_ra_info->pre_rate = dm->priv->pshare->rf_ft_var.txforce;
 			odm_reset_ra_counter_8188e(p_ra_info);
 		}
-#endif
+		#endif
 
 		/* Start RA decision */
 		if (p_ra_info->pre_rate > p_ra_info->highest_rate)
 			rate_id = p_ra_info->highest_rate;
 		else
 			rate_id = p_ra_info->pre_rate;
+		
 		if (p_ra_info->rssi_sta_ra > RSSI_THRESHOLD[rate_id])
 			rty_pt_id = 0;
 		else
 			rty_pt_id = 1;
+		
 		penalty_id1 = RETRY_PENALTY_IDX[rty_pt_id][rate_id]; /* TODO by page */
 
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-			     (" nsc_down init is %d\n", p_ra_info->nsc_down));
-		/* pool_retry=p_ra_info->RTY[2]+p_ra_info->RTY[3]+p_ra_info->RTY[4]+p_ra_info->DROP; */
+		PHYDM_DBG(dm, DBG_RA, "nsc_down=%d\n", p_ra_info->nsc_down);
+		
 		p_ra_info->nsc_down += p_ra_info->RTY[0] * RETRY_PENALTY[penalty_id1][0];
 		p_ra_info->nsc_down += p_ra_info->RTY[1] * RETRY_PENALTY[penalty_id1][1];
 		p_ra_info->nsc_down += p_ra_info->RTY[2] * RETRY_PENALTY[penalty_id1][2];
 		p_ra_info->nsc_down += p_ra_info->RTY[3] * RETRY_PENALTY[penalty_id1][3];
 		p_ra_info->nsc_down += p_ra_info->RTY[4] * RETRY_PENALTY[penalty_id1][4];
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-			     (" nsc_down is %d, total*penalty[5] is %d\n",
-			p_ra_info->nsc_down, (p_ra_info->TOTAL * RETRY_PENALTY[penalty_id1][5])));
+		
+		PHYDM_DBG(dm, DBG_RA, " nsc_down=%d, total*penalty[5]=%d\n",
+			p_ra_info->nsc_down, (p_ra_info->TOTAL * RETRY_PENALTY[penalty_id1][5]));
+		
 		if (p_ra_info->nsc_down > (p_ra_info->TOTAL * RETRY_PENALTY[penalty_id1][5]))
 			p_ra_info->nsc_down -= p_ra_info->TOTAL * RETRY_PENALTY[penalty_id1][5];
 		else
@@ -570,61 +570,75 @@ odm_rate_decision_8188e(
 
 		/* rate up */
 		penalty_id2 = RETRY_PENALTY_UP_IDX[rate_id];
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-			     (" nsc_up init is %d\n", p_ra_info->nsc_up));
+		
+		PHYDM_DBG(dm, DBG_RA, " nsc_up=%d\n", p_ra_info->nsc_up);
+		
 		p_ra_info->nsc_up += p_ra_info->RTY[0] * RETRY_PENALTY[penalty_id2][0];
 		p_ra_info->nsc_up += p_ra_info->RTY[1] * RETRY_PENALTY[penalty_id2][1];
 		p_ra_info->nsc_up += p_ra_info->RTY[2] * RETRY_PENALTY[penalty_id2][2];
 		p_ra_info->nsc_up += p_ra_info->RTY[3] * RETRY_PENALTY[penalty_id2][3];
 		p_ra_info->nsc_up += p_ra_info->RTY[4] * RETRY_PENALTY[penalty_id2][4];
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-			     ("nsc_up is %d, total*up[5] is %d\n",
-			p_ra_info->nsc_up, (p_ra_info->TOTAL * RETRY_PENALTY[penalty_id2][5])));
+		
+		PHYDM_DBG(dm, DBG_RA, "nsc_up=%d, total*up[5]=%d\n",
+			p_ra_info->nsc_up, (p_ra_info->TOTAL * RETRY_PENALTY[penalty_id2][5]));
+		
 		if (p_ra_info->nsc_up > (p_ra_info->TOTAL * RETRY_PENALTY[penalty_id2][5]))
 			p_ra_info->nsc_up -= p_ra_info->TOTAL * RETRY_PENALTY[penalty_id2][5];
 		else
 			p_ra_info->nsc_up = 0;
 
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE | ODM_COMP_INIT, ODM_DBG_LOUD,
-			(" RssiStaRa= %d rty_pt_id=%d penalty_id1=0x%x  penalty_id2=0x%x rate_id=%d nsc_down=%d nsc_up=%d SGI=%d\n",
-			p_ra_info->rssi_sta_ra, rty_pt_id, penalty_id1, penalty_id2, rate_id, p_ra_info->nsc_down, p_ra_info->nsc_up, p_ra_info->rate_sgi));
-#if (DM_ODM_SUPPORT_TYPE == ODM_AP) && \
-	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
+		PHYDM_DBG(dm, DBG_RA | ODM_COMP_INIT,
+			" RssiStaRa= %d rty_pt_id=%d penalty_id1=0x%x  penalty_id2=0x%x rate_id=%d nsc_down=%d nsc_up=%d SGI=%d\n",
+			p_ra_info->rssi_sta_ra, rty_pt_id, penalty_id1, penalty_id2, rate_id, p_ra_info->nsc_down, p_ra_info->nsc_up, p_ra_info->rate_sgi);
+		
+		#if AP_USB_SDIO
 		if (0xFF != p_ra_info->bounding_learning_time)
 			p_ra_info->bounding_learning_time++;
-#endif
+		#endif
+
 		if ((p_ra_info->nsc_down < N_THRESHOLD_LOW[rate_id]) || (p_ra_info->DROP > DROPING_NECESSARY[rate_id]))
-			odm_rate_down_8188e(p_dm_odm, p_ra_info);
+			odm_rate_down_8188e(dm, p_ra_info);
 		/* else if ((p_ra_info->nsc_up > N_THRESHOLD_HIGH[rate_id])&&(pool_retry<POOL_RETRY_TH[rate_id])) */
 		else if (p_ra_info->nsc_up > N_THRESHOLD_HIGH[rate_id])
-			odm_rate_up_8188e(p_dm_odm, p_ra_info);
-#if (DM_ODM_SUPPORT_TYPE == ODM_AP) && \
-	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
-		else if ((p_ra_info->RTY[2] >= 100) && (ODM_BW20M == *p_dm_odm->p_band_width))
-			odm_rate_down_8188e(p_dm_odm, p_ra_info);
-#endif
+			odm_rate_up_8188e(dm, p_ra_info);
+		
+		#if AP_USB_SDIO
+		else if ((p_ra_info->RTY[2] >= 100) && (*dm->band_width == CHANNEL_WIDTH_20))
+			odm_rate_down_8188e(dm, p_ra_info);
+		#endif
 
-		if ((p_ra_info->decision_rate) == (p_ra_info->pre_rate))
+		if ((p_ra_info->decision_rate) == (p_ra_info->pre_rate)) {
+
+			PHYDM_DBG(dm, DBG_RA, "[Rate stay] macid=%d, dec_rate=0x%x, pre_rate=0x%x\n", mac_id, p_ra_info->decision_rate, p_ra_info->pre_rate);
 			dynamic_tx_rpt_timing_counter += 1;
-		else
+			/**/
+		} else { /*rate update*/
+		
+			PHYDM_DBG(dm, DBG_RA, "[Rate update] macid=%d, dec_rate=0x%x, pre_rate=0x%x\n", mac_id, p_ra_info->decision_rate, p_ra_info->pre_rate);
 			dynamic_tx_rpt_timing_counter = 0;
+			/*update rate information*/
+			cmd_buf[0] = (p_ra_info->rate_sgi << 7) | (p_ra_info->decision_rate & 0x7f);
+			cmd_buf[1] = mac_id;
+			phydm_c2h_ra_report_handler(dm, &(cmd_buf[0]), 3);
+			
+		}
 
 		if (dynamic_tx_rpt_timing_counter >= 4) {
-			odm_set_tx_rpt_timing_8188e(p_dm_odm, p_ra_info, 1);
-			ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("<=====rate don't change 4 times, Extend RPT Timing\n"));
+			odm_set_tx_rpt_timing_8188e(dm, p_ra_info, 1);
+			PHYDM_DBG(dm, DBG_RA, "<=====rate don't change 4 times, Extend RPT Timing\n");
 			dynamic_tx_rpt_timing_counter = 0;
 		}
 
-		p_ra_info->pre_rate = p_ra_info->decision_rate;  /* YJ,add,120120 */
+		p_ra_info->pre_rate = p_ra_info->decision_rate;
 
 		odm_reset_ra_counter_8188e(p_ra_info);
 	}
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, ("<=====odm_rate_decision_8188e()\n"));
+	PHYDM_DBG(dm, DBG_RA, "RA end\n");
 }
 
 static int
 odm_arfb_refresh_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	struct _odm_ra_info_  *p_ra_info
 )
 {
@@ -655,19 +669,19 @@ odm_arfb_refresh_8188e(
 		p_ra_info->ra_use_rate = (p_ra_info->rate_mask) & 0x0000000d;
 		break;
 	case 12:
-		mask_from_reg = odm_read_4byte(p_dm_odm, REG_ARFR0);
+		mask_from_reg = odm_read_4byte(dm, REG_ARFR0);
 		p_ra_info->ra_use_rate = (p_ra_info->rate_mask) & mask_from_reg;
 		break;
 	case 13:
-		mask_from_reg = odm_read_4byte(p_dm_odm, REG_ARFR1);
+		mask_from_reg = odm_read_4byte(dm, REG_ARFR1);
 		p_ra_info->ra_use_rate = (p_ra_info->rate_mask) & mask_from_reg;
 		break;
 	case 14:
-		mask_from_reg = odm_read_4byte(p_dm_odm, REG_ARFR2);
+		mask_from_reg = odm_read_4byte(dm, REG_ARFR2);
 		p_ra_info->ra_use_rate = (p_ra_info->rate_mask) & mask_from_reg;
 		break;
 	case 15:
-		mask_from_reg = odm_read_4byte(p_dm_odm, REG_ARFR3);
+		mask_from_reg = odm_read_4byte(dm, REG_ARFR3);
 		p_ra_info->ra_use_rate = (p_ra_info->rate_mask) & mask_from_reg;
 		break;
 
@@ -705,20 +719,20 @@ odm_arfb_refresh_8188e(
 		p_ra_info->pt_mode_ss = 1;
 	else
 		p_ra_info->pt_mode_ss = 0;
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD,
-		("ODM_ARFBRefresh_8188E(): pt_mode_ss=%d\n", p_ra_info->pt_mode_ss));
+	PHYDM_DBG(dm, DBG_RA,
+		"ODM_ARFBRefresh_8188E(): pt_mode_ss=%d\n", p_ra_info->pt_mode_ss);
 
 #endif
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD,
-		("ODM_ARFBRefresh_8188E(): rate_id=%d rate_mask=%8.8x ra_use_rate=%8.8x highest_rate=%d\n",
-		p_ra_info->rate_id, p_ra_info->rate_mask, p_ra_info->ra_use_rate, p_ra_info->highest_rate));
+	PHYDM_DBG(dm, DBG_RA,
+		"ODM_ARFBRefresh_8188E(): rate_id=%d rate_mask=%8.8x ra_use_rate=%8.8x highest_rate=%d\n",
+		p_ra_info->rate_id, p_ra_info->rate_mask, p_ra_info->ra_use_rate, p_ra_info->highest_rate);
 	return 0;
 }
 
 #if POWER_TRAINING_ACTIVE == 1
 static void
 odm_pt_try_state_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	struct _odm_ra_info_	*p_ra_info
 )
 {
@@ -771,8 +785,8 @@ odm_pt_try_state_8188e(
 
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
 	/* Disable power training when noisy environment */
-	if (p_dm_odm->is_disable_power_training) {
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RA_MASK, ODM_DBG_LOUD, ("odm_pt_try_state_8188e(): Disable power training when noisy environment\n"));
+	if (dm->is_disable_power_training) {
+		PHYDM_DBG(dm, DBG_PWR_TRAIN, "Disable pow train when noisy\n");
 		p_ra_info->pt_stage = 0;
 		p_ra_info->ra_stage = 0;
 		p_ra_info->pt_stop_count = 0;
@@ -824,37 +838,37 @@ odm_pt_decision_8188e(
 
 static void
 odm_ra_tx_rpt_timer_setting(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u16			min_rpt_time
 )
 {
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, (" =====>odm_ra_tx_rpt_timer_setting()\n"));
+	PHYDM_DBG(dm, DBG_RA, " =====>odm_ra_tx_rpt_timer_setting()\n");
 
 
-	if (p_dm_odm->currmin_rpt_time != min_rpt_time) {
-		ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD,
-			(" currmin_rpt_time =0x%04x min_rpt_time=0x%04x\n", p_dm_odm->currmin_rpt_time, min_rpt_time));
+	if (dm->currmin_rpt_time != min_rpt_time) {
+		PHYDM_DBG(dm, DBG_RA,
+			" currmin_rpt_time =0x%04x min_rpt_time=0x%04x\n", dm->currmin_rpt_time, min_rpt_time);
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_AP))
-		odm_ra_set_tx_rpt_time(p_dm_odm, min_rpt_time);
+		odm_ra_set_tx_rpt_time(dm, min_rpt_time);
 #else
-		rtw_rpt_timer_cfg_cmd(p_dm_odm->adapter, min_rpt_time);
+		rtw_rpt_timer_cfg_cmd(dm->adapter, min_rpt_time);
 #endif
-		p_dm_odm->currmin_rpt_time = min_rpt_time;
+		dm->currmin_rpt_time = min_rpt_time;
 	}
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE, (" <=====odm_ra_tx_rpt_timer_setting()\n"));
+	PHYDM_DBG(dm, DBG_RA, " <=====odm_ra_tx_rpt_timer_setting()\n");
 }
 
 
 void
 odm_ra_support_init(
-	struct PHY_DM_STRUCT	*p_dm_odm
+	struct dm_struct	*dm
 )
 {
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("=====>odm_ra_support_init()\n"));
+	PHYDM_DBG(dm, DBG_RA, "=====>odm_ra_support_init()\n");
 
 	/* 2012/02/14 MH Be noticed, the init must be after IC type is recognized!!!!! */
-	if (p_dm_odm->support_ic_type == ODM_RTL8188E)
-		p_dm_odm->ra_support88e = true;
+	if (dm->support_ic_type == ODM_RTL8188E)
+		dm->ra_support88e = true;
 
 }
 
@@ -862,39 +876,15 @@ odm_ra_support_init(
 
 int
 odm_ra_info_init(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u32		mac_id
 )
 {
-	struct _odm_ra_info_ *p_ra_info = &p_dm_odm->ra_info[mac_id];
-#if 0
-	u8 wireless_mode = 0xFF; /* invalid value */
-	u8 max_rate_idx = 0x13; /* MCS7 */
-	if (p_dm_odm->p_wireless_mode != NULL)
-		wireless_mode = *(p_dm_odm->p_wireless_mode);
+	struct _odm_ra_info_ *p_ra_info = &dm->ra_info[mac_id];
 
-	if (wireless_mode != 0xFF) {
-		if (wireless_mode & ODM_WM_N24G)
-			max_rate_idx = 0x13;
-		else if (wireless_mode & ODM_WM_G)
-			max_rate_idx = 0x0b;
-		else if (wireless_mode & ODM_WM_B)
-			max_rate_idx = 0x03;
-	}
-
-	/* printk("%s ==>wireless_mode:0x%08x,max_raid_idx:0x%02x\n ",__FUNCTION__,wireless_mode,max_rate_idx); */
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD,
-		("odm_ra_info_init(): wireless_mode:0x%08x,max_raid_idx:0x%02x\n",
-		      wireless_mode, max_rate_idx));
-
-	p_ra_info->decision_rate = max_rate_idx;
-	p_ra_info->pre_rate = max_rate_idx;
-	p_ra_info->highest_rate = max_rate_idx;
-#else
-	p_ra_info->decision_rate = 0x13;
-	p_ra_info->pre_rate = 0x13;
-	p_ra_info->highest_rate = 0x13;
-#endif
+	p_ra_info->decision_rate = ODM_RATEMCS7;
+	p_ra_info->pre_rate = ODM_RATEMCS7;
+	p_ra_info->highest_rate = ODM_RATEMCS7;
 	p_ra_info->lowest_rate = 0;
 	p_ra_info->rate_id = 0;
 	p_ra_info->rate_mask = 0xffffffff;
@@ -928,8 +918,7 @@ odm_ra_info_init(
 	p_ra_info->pt_mode_ss = 0;
 	p_ra_info->ra_stage = 0;
 #endif
-#if (DM_ODM_SUPPORT_TYPE == ODM_AP) && \
-	((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE))
+#if AP_USB_SDIO
 	p_ra_info->rate_down_counter = 0;
 	p_ra_info->rate_up_counter = 0;
 	p_ra_info->rate_direction = 0;
@@ -941,21 +930,24 @@ odm_ra_info_init(
 	return 0;
 }
 
-int
+void
 odm_ra_info_init_all(
-	struct PHY_DM_STRUCT		*p_dm_odm
+	struct dm_struct		*dm
 )
 {
 	u32 mac_id = 0;
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("=====>\n"));
-	p_dm_odm->currmin_rpt_time = 0;
+	if (dm->support_ic_type != ODM_RTL8188E)
+		return;
+
+	PHYDM_DBG(dm, DBG_RA, "=====>\n");
+	dm->currmin_rpt_time = 0;
 
 	for (mac_id = 0; mac_id < ODM_ASSOCIATE_ENTRY_NUM; mac_id++)
-		odm_ra_info_init(p_dm_odm, mac_id);
+		odm_ra_info_init(dm, mac_id);
 
 	/* Redifine arrays for I-cut NIC */
-	if (p_dm_odm->cut_version == ODM_CUT_I) {
+	if (dm->cut_version == ODM_CUT_I) {
 #if !(DM_ODM_SUPPORT_TYPE & ODM_AP)
 
 		u8 i;
@@ -985,14 +977,14 @@ odm_ra_info_init_all(
 
 			RETRY_PENALTY_UP_IDX[i] = RETRY_PENALTY_UP_IDX_S[i];
 		}
-		return 0;
+		return;
 #endif
 	}
 
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)/* This is for non-I-cut */
 	{
-		struct _ADAPTER	*adapter = p_dm_odm->adapter;
+		void	*adapter = dm->adapter;
 
 		/* dbg_print("adapter->mgnt_info.reg_ra_lvl = %d\n", adapter->mgnt_info.reg_ra_lvl); */
 
@@ -1001,7 +993,7 @@ odm_ra_info_init_all(
 		/* need to to adjust different RA pattern for middle range RA. 20-30dB degarde */
 		/* 88E rate adptve will raise too slow. */
 		/*  */
-		if (adapter->MgntInfo.RegRALvl == 0) {
+		if (((PADAPTER)adapter)->MgntInfo.RegRALvl == 0) {
 			RETRY_PENALTY_UP_IDX[11] = 0x14;
 
 			RETRY_PENALTY_UP_IDX[17] = 0x13;
@@ -1013,7 +1005,7 @@ odm_ra_info_init_all(
 			RETRY_PENALTY_UP_IDX[25] = 0x13;
 			RETRY_PENALTY_UP_IDX[26] = 0x14;
 			RETRY_PENALTY_UP_IDX[27] = 0x15;
-		} else if (adapter->MgntInfo.RegRALvl == 1) {
+		} else if (((PADAPTER)adapter)->MgntInfo.RegRALvl == 1) {
 			RETRY_PENALTY_UP_IDX[17] = 0x13;
 			RETRY_PENALTY_UP_IDX[18] = 0x13;
 			RETRY_PENALTY_UP_IDX[19] = 0x14;
@@ -1023,10 +1015,10 @@ odm_ra_info_init_all(
 			RETRY_PENALTY_UP_IDX[25] = 0x13;
 			RETRY_PENALTY_UP_IDX[26] = 0x13;
 			RETRY_PENALTY_UP_IDX[27] = 0x14;
-		} else if (adapter->MgntInfo.RegRALvl == 2) {
+		} else if (((PADAPTER)adapter)->MgntInfo.RegRALvl == 2) {
 			/* Compile flag default is lvl2, we need not to update. */
-		} else if (adapter->MgntInfo.RegRALvl >= 0x80) {
-			u8	index = 0, offset = adapter->MgntInfo.RegRALvl - 0x80;
+		} else if (((PADAPTER)adapter)->MgntInfo.RegRALvl >= 0x80) {
+			u8	index = 0, offset = ((PADAPTER)adapter)->MgntInfo.RegRALvl - 0x80;
 
 			/* Reset to default rate adaptive value. */
 			RETRY_PENALTY_UP_IDX[11] = 0x14;
@@ -1041,8 +1033,8 @@ odm_ra_info_init_all(
 			RETRY_PENALTY_UP_IDX[26] = 0x14;
 			RETRY_PENALTY_UP_IDX[27] = 0x15;
 
-			if (adapter->MgntInfo.RegRALvl >= 0x90) {
-				offset = adapter->MgntInfo.RegRALvl - 0x90;
+			if (((PADAPTER)adapter)->MgntInfo.RegRALvl >= 0x90) {
+				offset = ((PADAPTER)adapter)->MgntInfo.RegRALvl - 0x90;
 				/* Lazy mode. */
 				for (index = 0; index < 28; index++)
 					RETRY_PENALTY_UP_IDX[index] += (offset);
@@ -1055,122 +1047,163 @@ odm_ra_info_init_all(
 		}
 	}
 #endif
-	return 0;
+	return;
 }
 
 
 u8
 odm_ra_get_sgi_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 )
 {
-	if ((NULL == p_dm_odm) || (mac_id >= ASSOCIATE_ENTRY_NUM))
+	if ((dm == NULL) || (mac_id >= ASSOCIATE_ENTRY_NUM))
 		return 0;
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-		("mac_id=%d SGI=%d\n", mac_id, p_dm_odm->ra_info[mac_id].rate_sgi));
-	return p_dm_odm->ra_info[mac_id].rate_sgi;
+	PHYDM_DBG(dm, DBG_RA,
+		"mac_id=%d SGI=%d\n", mac_id, dm->ra_info[mac_id].rate_sgi);
+	return dm->ra_info[mac_id].rate_sgi;
 }
 
 u8
 odm_ra_get_decision_rate_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 )
 {
-	u8 decision_rate = 0;
-	struct _rate_adaptive_table_	*p_ra_table = &p_dm_odm->dm_ra_table;
-	u8	cmd_buf[3];
+	u8 rate = 0;
 
-	if ((NULL == p_dm_odm) || (mac_id >= ASSOCIATE_ENTRY_NUM))
+	if ((dm == NULL) || (mac_id >= ASSOCIATE_ENTRY_NUM))
 		return 0;
-	decision_rate = (p_dm_odm->ra_info[mac_id].decision_rate);
+	
+	rate = (dm->ra_info[mac_id].decision_rate);
 
-	if (decision_rate != p_ra_table->link_tx_rate[mac_id]) {
-
-		cmd_buf[1] = mac_id;
-		cmd_buf[0] = decision_rate;
-		phydm_c2h_ra_report_handler(p_dm_odm, &(cmd_buf[0]), 3);
-	}
-
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-		(" mac_id=%d decision_rate=0x%x\n", mac_id, decision_rate));
-	return decision_rate;
+	/*PHYDM_DBG(dm, DBG_RA, "Rate[%d]=0x%x\n", mac_id, rate);*/
+	return rate;
 }
 
 u8
 odm_ra_get_hw_pwr_status_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 )
 {
 	u8 pt_stage = 5;
-	if ((NULL == p_dm_odm) || (mac_id >= ASSOCIATE_ENTRY_NUM))
+	if ((dm == NULL) || (mac_id >= ASSOCIATE_ENTRY_NUM))
 		return 0;
-	pt_stage = (p_dm_odm->ra_info[mac_id].pt_stage);
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-		     ("mac_id=%d pt_stage=0x%x\n", mac_id, pt_stage));
+	pt_stage = (dm->ra_info[mac_id].pt_stage);
+	PHYDM_DBG(dm, DBG_RA,
+		     "mac_id=%d pt_stage=0x%x\n", mac_id, pt_stage);
 	return pt_stage;
+}
+
+u8
+phydm_get_rate_id_88e(
+	void			*dm_void,
+	u8			macid
+)
+{
+	struct dm_struct	*dm = (struct dm_struct *)dm_void;
+	struct cmn_sta_info		*sta = dm->phydm_sta_info[macid];
+	struct ra_sta_info			*ra =NULL;
+	enum channel_width		bw = (enum channel_width)0;
+	enum wireless_set			wireless_mode = WIRELESS_HT;
+	u8	rate_id_idx = PHYDM_BGN_20M_1SS;
+
+	if (is_sta_active(sta)) {
+		
+		ra = &(sta->ra_info);
+		bw = sta->bw_mode;
+		wireless_mode = sta->support_wireless_set;
+
+	} else {
+		PHYDM_DBG(dm, DBG_RA, "[Warning] %s: invalid sta_info\n", __func__);
+		return 0;
+	}
+
+	PHYDM_DBG(dm, DBG_RA, "[88E] macid=%d, wireless_set=0x%x, BW=0x%x\n",
+			sta->mac_id, wireless_mode, bw);
+
+	if (wireless_mode == WIRELESS_CCK)								/*B mode*/
+		rate_id_idx = PHYDM_RAID_88E_B;
+	else if (wireless_mode ==  WIRELESS_OFDM)						/*G mode*/
+		rate_id_idx = PHYDM_RAID_88E_G;
+	else if (wireless_mode ==  (WIRELESS_CCK | WIRELESS_OFDM))		/*BG mode*/
+		rate_id_idx = PHYDM_RAID_88E_GB;
+	else if (wireless_mode ==  WIRELESS_HT)							/*N mode*/
+		rate_id_idx = PHYDM_RAID_88E_N;	
+	else if (wireless_mode ==  (WIRELESS_OFDM | WIRELESS_HT))			/*GN mode*/
+		rate_id_idx = PHYDM_RAID_88E_NG;
+	else if (wireless_mode == (WIRELESS_CCK | WIRELESS_OFDM | WIRELESS_HT))	/*BGN mode*/
+		rate_id_idx = PHYDM_RAID_88E_NGB;
+	 else {
+		PHYDM_DBG(dm, DBG_RA, "[Warrning] No rate_id is found\n");
+		rate_id_idx = RATR_INX_WIRELESS_GB;
+	}
+	
+	PHYDM_DBG(dm, DBG_RA, "88E Rate_ID=((0x%x))\n", rate_id_idx);
+	return rate_id_idx;
+
 }
 
 void
 odm_ra_update_rate_info_8188e(
-	struct PHY_DM_STRUCT *p_dm_odm,
+	struct dm_struct *dm,
 	u8 mac_id,
 	u8 rate_id,
 	u32 rate_mask,
 	u8 sgi_enable
 )
 {
-	struct _odm_ra_info_ *p_ra_info = NULL;
+	struct _odm_ra_info_	*p_ra_info = NULL;
+	struct cmn_sta_info	*sta = dm->phydm_sta_info[mac_id];
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD,
-		     ("mac_id=%d rate_id=0x%x rate_mask=0x%x sgi_enable=%d\n",
-		      mac_id, rate_id, rate_mask, sgi_enable));
-	if ((NULL == p_dm_odm) || (mac_id >= ASSOCIATE_ENTRY_NUM))
+	PHYDM_DBG(dm, DBG_RA,
+		     "mac_id=%d rate_id=0x%x rate_mask=0x%x sgi_enable=%d\n",
+		      sta->mac_id, rate_id, rate_mask, sgi_enable);
+	if ((dm == NULL) || (sta->mac_id >= ASSOCIATE_ENTRY_NUM))
 		return;
 
-	p_ra_info = &(p_dm_odm->ra_info[mac_id]);
+	p_ra_info = &(dm->ra_info[sta->mac_id]);
 	p_ra_info->rate_id = rate_id;
 	p_ra_info->rate_mask = rate_mask;
 	p_ra_info->sgi_enable = sgi_enable;
-	odm_arfb_refresh_8188e(p_dm_odm, p_ra_info);
+	odm_arfb_refresh_8188e(dm, p_ra_info);
 }
 
 void
 odm_ra_set_rssi_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u8			mac_id,
 	u8			rssi
 )
 {
 	struct _odm_ra_info_ *p_ra_info = NULL;
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_TRACE,
-		     (" mac_id=%d rssi=%d\n", mac_id, rssi));
-	if ((NULL == p_dm_odm) || (mac_id >= ASSOCIATE_ENTRY_NUM))
+	PHYDM_DBG(dm, DBG_RA,
+		     " mac_id=%d rssi=%d\n", mac_id, rssi);
+	if ((dm == NULL) || (mac_id >= ASSOCIATE_ENTRY_NUM))
 		return;
 
-	p_ra_info = &(p_dm_odm->ra_info[mac_id]);
+	p_ra_info = &(dm->ra_info[mac_id]);
 	p_ra_info->rssi_sta_ra = rssi;
 }
 
 void
 odm_ra_set_tx_rpt_time(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u16			min_rpt_time
 )
 {
 #if (DM_ODM_SUPPORT_TYPE & (ODM_AP))
 	if (min_rpt_time != 0xffff) {
 #if defined(CONFIG_PCI_HCI)
-		odm_write_2byte(p_dm_odm, REG_TX_RPT_TIME, min_rpt_time);
+		odm_write_2byte(dm, REG_TX_RPT_TIME, min_rpt_time);
 #elif defined(CONFIG_USB_HCI) || defined(CONFIG_SDIO_HCI)
-		notify_tx_report_interval_change(p_dm_odm->priv, min_rpt_time);
+		notify_tx_report_interval_change(dm->priv, min_rpt_time);
 #endif
 	}
 #else
-	odm_write_2byte(p_dm_odm, REG_TX_RPT_TIME, min_rpt_time);
+	odm_write_2byte(dm, REG_TX_RPT_TIME, min_rpt_time);
 #endif
 
 }
@@ -1178,7 +1211,7 @@ odm_ra_set_tx_rpt_time(
 
 void
 odm_ra_tx_rpt2_handle_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u8			*tx_rpt_buf,
 	u16			tx_rpt_len,
 	u32			mac_id_valid_entry0,
@@ -1191,8 +1224,8 @@ odm_ra_tx_rpt2_handle_8188e(
 	u32			valid = 0, item_num = 0;
 	u16			min_rpt_time = 0x927c;
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("=====>odm_ra_tx_rpt2_handle_8188e(): valid0=%d valid1=%d BufferLength=%d\n",
-			mac_id_valid_entry0, mac_id_valid_entry1, tx_rpt_len));
+	PHYDM_DBG(dm, DBG_RA, "=====>odm_ra_tx_rpt2_handle_8188e(): valid0=%d valid1=%d BufferLength=%d\n",
+			mac_id_valid_entry0, mac_id_valid_entry1, tx_rpt_len);
 
 	item_num = tx_rpt_len >> 3;
 	p_buffer = tx_rpt_buf;
@@ -1201,10 +1234,10 @@ odm_ra_tx_rpt2_handle_8188e(
 		valid = 0;
 		if (mac_id < 32)
 			valid = (1 << mac_id) & mac_id_valid_entry0;
-		else if (mac_id < 64)
-			valid = (1 << (mac_id - 32)) & mac_id_valid_entry1;
+		/*else if (mac_id < 64)*/
+		/*	valid = (1 << (mac_id - 32)) & mac_id_valid_entry1;*/
 
-		p_ra_info = &(p_dm_odm->ra_info[mac_id]);
+		p_ra_info = &(dm->ra_info[mac_id]);
 		if (valid) {
 
 
@@ -1225,7 +1258,7 @@ odm_ra_tx_rpt2_handle_8188e(
 			extern struct stat_info *get_macidinfo(struct rtl8192cd_priv *priv, unsigned int aid);
 
 			{
-				struct stat_info *pstat = get_macidinfo(p_dm_odm->priv, mac_id);
+				struct stat_info *pstat = get_macidinfo(dm->priv, mac_id);
 				if (pstat) {
 					pstat->cur_tx_ok += p_ra_info->RTY[0];
 					pstat->cur_tx_retry_pkts += p_ra_info->RTY[1] + p_ra_info->RTY[2] + p_ra_info->RTY[3] + p_ra_info->RTY[4];
@@ -1237,8 +1270,8 @@ odm_ra_tx_rpt2_handle_8188e(
 			}
 #endif
 			if (p_ra_info->TOTAL != 0) {
-				ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD,
-					("macid=%d Total=%d R0=%d R1=%d R2=%d R3=%d R4=%d D0=%d valid0=%x valid1=%x\n",
+				PHYDM_DBG(dm, DBG_RA,
+					"macid=%d Total=%d R0=%d R1=%d R2=%d R3=%d R4=%d D0=%d valid0=%x valid1=%x\n",
 					      mac_id,
 					      p_ra_info->TOTAL,
 					      p_ra_info->RTY[0],
@@ -1248,13 +1281,13 @@ odm_ra_tx_rpt2_handle_8188e(
 					      p_ra_info->RTY[4],
 					      p_ra_info->DROP,
 					      mac_id_valid_entry0,
-					      mac_id_valid_entry1));
+					      mac_id_valid_entry1);
 #if POWER_TRAINING_ACTIVE == 1
 				if (p_ra_info->pt_active) {
 					if (p_ra_info->ra_stage < 5)
-						odm_rate_decision_8188e(p_dm_odm, p_ra_info);
+						odm_rate_decision_8188e(dm, p_ra_info, mac_id);
 					else if (p_ra_info->ra_stage == 5) /* Power training try state */
-						odm_pt_try_state_8188e(p_dm_odm, p_ra_info);
+						odm_pt_try_state_8188e(dm, p_ra_info);
 					else  /* ra_stage==6 */
 						odm_pt_decision_8188e(p_ra_info);
 
@@ -1264,22 +1297,22 @@ odm_ra_tx_rpt2_handle_8188e(
 					else
 						p_ra_info->ra_stage = 0;
 				} else
-					odm_rate_decision_8188e(p_dm_odm, p_ra_info);
+					odm_rate_decision_8188e(dm, p_ra_info, mac_id);
 #else
-				odm_rate_decision_8188e(p_dm_odm, p_ra_info);
+				odm_rate_decision_8188e(dm, p_ra_info, mac_id);
 #endif
 
 #if (DM_ODM_SUPPORT_TYPE & ODM_AP)
-				extern void rtl8188e_set_station_tx_rate_info(struct PHY_DM_STRUCT *, struct _odm_ra_info_ *, int);
-				rtl8188e_set_station_tx_rate_info(p_dm_odm, p_ra_info, mac_id);
-#ifdef DETECT_STA_EXISTANCE
-				void rtl8188e_detect_sta_existance(struct PHY_DM_STRUCT	*p_dm_odm, struct _odm_ra_info_ *p_ra_info, int mac_id);
-				rtl8188e_detect_sta_existance(p_dm_odm, p_ra_info, mac_id);
-#endif
+				extern void rtl8188e_set_station_tx_rate_info(struct dm_struct *, struct _odm_ra_info_ *, int);
+				rtl8188e_set_station_tx_rate_info(dm, p_ra_info, mac_id);
+				#if 0
+				void rtl8188e_detect_sta_existance(struct dm_struct	*dm, struct _odm_ra_info_ *p_ra_info, int mac_id);
+				rtl8188e_detect_sta_existance(dm, p_ra_info, mac_id);
+				#endif
 #endif
 
-				ODM_RT_TRACE(p_dm_odm, ODM_COMP_INIT, ODM_DBG_LOUD,
-					("macid=%d R0=%d R1=%d R2=%d R3=%d R4=%d drop=%d valid0=%x rate_id=%d SGI=%d\n",
+				PHYDM_DBG(dm, DBG_RA,
+					"macid=%d R0=%d R1=%d R2=%d R3=%d R4=%d drop=%d valid0=%x rate_id=%d SGI=%d\n",
 					      mac_id,
 					      p_ra_info->RTY[0],
 					      p_ra_info->RTY[1],
@@ -1289,29 +1322,30 @@ odm_ra_tx_rpt2_handle_8188e(
 					      p_ra_info->DROP,
 					      mac_id_valid_entry0,
 					      p_ra_info->decision_rate,
-					      p_ra_info->rate_sgi));
+					      p_ra_info->rate_sgi);
 			} else
-				ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, (" TOTAL=0!!!!\n"));
+				PHYDM_DBG(dm, DBG_RA, " TOTAL=0!!!!\n");
 		}
 
 		if (min_rpt_time > p_ra_info->rpt_time)
 			min_rpt_time = p_ra_info->rpt_time;
 
 		p_buffer += TX_RPT2_ITEM_SIZE;
+		
 		mac_id++;
 	} while (mac_id < item_num);
 
-	odm_ra_tx_rpt_timer_setting(p_dm_odm, min_rpt_time);
+	odm_ra_tx_rpt_timer_setting(dm, min_rpt_time);
 
 
-	ODM_RT_TRACE(p_dm_odm, ODM_COMP_RATE_ADAPTIVE, ODM_DBG_LOUD, ("<===== odm_ra_tx_rpt2_handle_8188e()\n"));
+	PHYDM_DBG(dm, DBG_RA, "<===== odm_ra_tx_rpt2_handle_8188e()\n");
 }
 
 #else
 
 static void
 odm_ra_tx_rpt_timer_setting(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u16			min_rpt_time
 )
 {
@@ -1321,7 +1355,7 @@ odm_ra_tx_rpt_timer_setting(
 
 void
 odm_ra_support_init(
-	struct PHY_DM_STRUCT	*p_dm_odm
+	struct dm_struct	*dm
 )
 {
 	return;
@@ -1329,24 +1363,24 @@ odm_ra_support_init(
 
 int
 odm_ra_info_init(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u32		mac_id
 )
 {
 	return 0;
 }
 
-int
+void
 odm_ra_info_init_all(
-	struct PHY_DM_STRUCT		*p_dm_odm
+	struct dm_struct		*dm
 )
 {
-	return 0;
+	return;
 }
 
 u8
 odm_ra_get_sgi_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 )
 {
@@ -1355,7 +1389,7 @@ odm_ra_get_sgi_8188e(
 
 u8
 odm_ra_get_decision_rate_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 )
 {
@@ -1363,7 +1397,7 @@ odm_ra_get_decision_rate_8188e(
 }
 u8
 odm_ra_get_hw_pwr_status_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 )
 {
@@ -1372,7 +1406,7 @@ odm_ra_get_hw_pwr_status_8188e(
 
 void
 odm_ra_update_rate_info_8188e(
-	struct PHY_DM_STRUCT *p_dm_odm,
+	struct dm_struct *dm,
 	u8 mac_id,
 	u8 rate_id,
 	u32 rate_mask,
@@ -1384,7 +1418,7 @@ odm_ra_update_rate_info_8188e(
 
 void
 odm_ra_set_rssi_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u8			mac_id,
 	u8			rssi
 )
@@ -1394,7 +1428,7 @@ odm_ra_set_rssi_8188e(
 
 void
 odm_ra_set_tx_rpt_time(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u16			min_rpt_time
 )
 {
@@ -1403,7 +1437,7 @@ odm_ra_set_tx_rpt_time(
 
 void
 odm_ra_tx_rpt2_handle_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u8			*tx_rpt_buf,
 	u16			tx_rpt_len,
 	u32			mac_id_valid_entry0,

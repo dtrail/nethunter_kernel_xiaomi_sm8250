@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,18 +11,16 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #define _RTW_BR_EXT_C_
 
 #ifdef __KERNEL__
+    #include <linux/version.h>
 	#include <linux/if_arp.h>
 	#include <net/ip.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 	#include <net/ipx.h>
+#endif
 	#include <linux/atalk.h>
 	#include <linux/udp.h>
 	#include <linux/if_pppox.h>
@@ -119,7 +117,13 @@ static __inline__ int __nat25_add_pppoe_tag(struct sk_buff *skb, struct pppoe_ta
 	/* have a room for new tag */
 	memmove(((unsigned char *)ph->tag + data_len), (unsigned char *)ph->tag, ntohs(ph->length));
 	ph->length = htons(ntohs(ph->length) + data_len);
+#if (defined __GNUC__) && (__GNUC__ > 10)
+    #pragma GCC diagnostic ignored "-Wstringop-overread"
+#endif
 	memcpy((unsigned char *)ph->tag, tag, data_len);
+#if (defined __GNUC__) && (__GNUC__ > 10)
+    #pragma GCC diagnostic pop
+#endif
 	return data_len;
 }
 
@@ -953,6 +957,7 @@ int nat25_db_handle(_adapter *priv, struct sk_buff *skb, int method)
 			}
 		}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
 		/*   IPX  */
 		if (ipx != NULL) {
 			switch (method) {
@@ -1021,8 +1026,12 @@ int nat25_db_handle(_adapter *priv, struct sk_buff *skb, int method)
 			}
 		}
 
+
 		/*   AARP  */
 		else if (ea != NULL) {
+#else
+		if (ea != NULL) {
+#endif
 			/* Sanity check fields. */
 			if (ea->hw_len != ETH_ALEN || ea->pa_len != AARP_PA_ALEN) {
 				DEBUG_WARN("NAT25: Appletalk AARP Sanity check fail!\n");

@@ -1,19 +1,19 @@
+/******************************************************************************
+ *
+ * Copyright(c) Semiconductor - 2017 Realtek Corporation.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ *****************************************************************************/
 #ifndef __INC_RA_H
 #define __INC_RA_H
-/*++
-Copyright (c) Realtek Semiconductor Corp. All rights reserved.
-
-Module Name:
-	rate_adaptive.h
-
-Abstract:
-	Prototype of RA and related data structure.
-
-Major Change History:
-	When       Who               What
-	---------- ---------------   -------------------------------
-	2011-08-12 Page            Create.
---*/
 
 /* rate adaptive define */
 #define	PERENTRY	23
@@ -23,6 +23,8 @@ Major Change History:
 
 #define		DM_RA_RATE_UP				1
 #define		DM_RA_RATE_DOWN			2
+
+#define	AP_USB_SDIO	((DM_ODM_SUPPORT_TYPE == ODM_AP) && ((DEV_BUS_TYPE == RT_USB_INTERFACE) || (DEV_BUS_TYPE == RT_SDIO_INTERFACE)))
 
 #if (DM_ODM_SUPPORT_TYPE != ODM_WIN)
 	/*
@@ -41,44 +43,64 @@ Major Change History:
 	#define GET_TX_REPORT_TYPE1_DROP_1(__paddr)						LE_BITS_TO_1BYTE(__paddr+4+3, 0, 8)
 #endif
 
+enum phydm_rateid_idx_88e_e { /*Copy From SD4  _RATR_TABLE_MODE*/
+	PHYDM_RAID_88E_NGB = 0,		/* BGN 40 Mhz 2SS 1SS */
+	PHYDM_RAID_88E_NG = 1,		/* GN or N */
+	PHYDM_RAID_88E_NB = 2,		/* BGN 20 Mhz 2SS 1SS  or BN */
+	PHYDM_RAID_88E_N = 3,
+	PHYDM_RAID_88E_GB = 4,
+	PHYDM_RAID_88E_G = 5,
+	PHYDM_RAID_88E_B = 6,
+	PHYDM_RAID_88E_MC = 7,
+	PHYDM_RAID_88E_AC_N = 8
+};
+
+
 /* End rate adaptive define */
 
 void
 odm_ra_support_init(
-	struct PHY_DM_STRUCT	*p_dm_odm
+	struct dm_struct	*dm
 );
 
-int
+void
 odm_ra_info_init_all(
-	struct PHY_DM_STRUCT		*p_dm_odm
+	struct dm_struct		*dm
 );
 
 int
 odm_ra_info_init(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u32		mac_id
 );
 
 u8
 odm_ra_get_sgi_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 );
 
 u8
 odm_ra_get_decision_rate_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 );
 
 u8
 odm_ra_get_hw_pwr_status_8188e(
-	struct PHY_DM_STRUCT	*p_dm_odm,
+	struct dm_struct	*dm,
 	u8		mac_id
 );
+
+u8
+phydm_get_rate_id_88e(
+	void			*dm_void,
+	u8			macid
+);
+
 void
 odm_ra_update_rate_info_8188e(
-	struct PHY_DM_STRUCT *p_dm_odm,
+	struct dm_struct *dm,
 	u8 mac_id,
 	u8 rate_id,
 	u32 rate_mask,
@@ -87,14 +109,14 @@ odm_ra_update_rate_info_8188e(
 
 void
 odm_ra_set_rssi_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u8			mac_id,
 	u8			rssi
 );
 
 void
 odm_ra_tx_rpt2_handle_8188e(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u8			*tx_rpt_buf,
 	u16			tx_rpt_len,
 	u32			mac_id_valid_entry0,
@@ -104,7 +126,7 @@ odm_ra_tx_rpt2_handle_8188e(
 
 void
 odm_ra_set_tx_rpt_time(
-	struct PHY_DM_STRUCT		*p_dm_odm,
+	struct dm_struct		*dm,
 	u16			min_rpt_time
 );
 #endif
