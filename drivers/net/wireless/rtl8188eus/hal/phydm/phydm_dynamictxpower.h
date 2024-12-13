@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017  Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -8,15 +8,20 @@
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
+ * The full GNU General Public License is included in this distribution in the
+ * file called LICENSE.
  *
+ * Contact Information:
+ * wlanfae <wlanfae@realtek.com>
+ * Realtek Corporation, No. 2, Innovation Road II, Hsinchu Science Park,
+ * Hsinchu 300, Taiwan.
  *
- ******************************************************************************/
+ * Larry Finger <Larry.Finger@lwfinger.net>
+ *
+ *****************************************************************************/
 
 #ifndef	__PHYDMDYNAMICTXPOWER_H__
 #define    __PHYDMDYNAMICTXPOWER_H__
@@ -49,48 +54,62 @@
 #define		tx_high_pwr_level_70			8
 #define		tx_high_pwr_level_100			9
 
+enum phydm_dtp_power_offset {
+	PHYDM_OFFSET_ZERO = 0,
+	PHYDM_OFFSET_MINUS_3DB = 1, 
+	PHYDM_OFFSET_MINUS_7DB = 2,
+	PHYDM_OFFSET_MINUS_11DB = 3,
+	PHYDM_OFFSET_ADD_3DB = 4,
+	PHYDM_OFFSET_ADD_6DB = 5
+};
+
 void
-odm_dynamic_tx_power_init(
-	void					*p_dm_void
+phydm_pow_train_init(
+	void					*dm_void
+);
+
+void
+phydm_dynamic_tx_power(
+	void					*dm_void
 );
 
 void
 odm_dynamic_tx_power_restore_power_index(
-	void					*p_dm_void
+	void					*dm_void
 );
 
 void
 odm_dynamic_tx_power_nic(
-	void					*p_dm_void
+	void					*dm_void
 );
 
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN | ODM_CE))
 void
 odm_dynamic_tx_power_save_power_index(
-	void					*p_dm_void
+	void					*dm_void
 );
 
 void
 odm_dynamic_tx_power_write_power_index(
-	void					*p_dm_void,
+	void					*dm_void,
 	u8		value);
 
 void
 odm_dynamic_tx_power_8821(
-	void					*p_dm_void,
-	u8					*p_desc,
+	void					*dm_void,
+	u8					*desc,
 	u8					mac_id
 );
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 void
 odm_dynamic_tx_power_8814a(
-	void					*p_dm_void
+	void					*dm_void
 );
 
 
 void
 odm_set_tx_power_level8814(
-	struct _ADAPTER		*adapter,
+	void		*adapter,
 	u8			channel,
 	u8			pwr_lvl
 );
@@ -99,12 +118,17 @@ odm_set_tx_power_level8814(
 
 void
 odm_dynamic_tx_power(
-	void					*p_dm_void
+	void					*dm_void
 );
 
 void
-odm_dynamic_tx_power_ap(
-	void					*p_dm_void
+phydm_dynamic_tx_power(
+	void					*dm_void
+);
+
+void
+phydm_dynamic_tx_power_init(
+	void					*dm_void
 );
 
 #endif

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 #ifndef __RTL8188F_XMIT_H__
 #define __RTL8188F_XMIT_H__
 
@@ -306,9 +301,10 @@ thread_return rtl8188fs_xmit_thread(thread_context context);
 #endif
 
 #ifdef CONFIG_USB_HCI
+#ifdef CONFIG_XMIT_THREAD_MODE
 s32 rtl8188fu_xmit_buf_handler(PADAPTER padapter);
 #define hal_xmit_handler rtl8188fu_xmit_buf_handler
-
+#endif
 
 s32 rtl8188fu_init_xmit_priv(PADAPTER padapter);
 void rtl8188fu_free_xmit_priv(PADAPTER padapter);

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2007 - 2017 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -11,12 +11,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
- ******************************************************************************/
+ *****************************************************************************/
 /******************************************************************************
  *
  *
@@ -140,7 +135,7 @@ void rtl8188e_RF_ChangeTxPath(IN	PADAPTER	Adapter,
 VOID
 rtl8188e_PHY_RF6052SetBandwidth(
 	IN	PADAPTER				Adapter,
-	IN	CHANNEL_WIDTH		Bandwidth)	/* 20M or 40M */
+	IN	enum channel_width		Bandwidth)	/* 20M or 40M */
 {
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
 
@@ -167,7 +162,7 @@ phy_RF6052_Config_ParaFile(
 )
 {
 	u32					u4RegValue = 0;
-	u8					eRFPath;
+	enum rf_path			eRFPath;
 	BB_REGISTER_DEFINITION_T	*pPhyReg;
 
 	int					rtStatus = _SUCCESS;
@@ -177,7 +172,7 @@ phy_RF6052_Config_ParaFile(
 	/* 3 */ /* <2> Initialize RF */
 	/* 3 */ /* ----------------------------------------------------------------- */
 	/* for(eRFPath = RF_PATH_A; eRFPath <pHalData->NumTotalRFPath; eRFPath++) */
-	for (eRFPath = 0; eRFPath < pHalData->NumTotalRFPath; eRFPath++) {
+	for (eRFPath = RF_PATH_A; eRFPath < pHalData->NumTotalRFPath; eRFPath++) {
 
 		pPhyReg = &pHalData->PHYRegDef[eRFPath];
 
@@ -190,6 +185,9 @@ phy_RF6052_Config_ParaFile(
 		case RF_PATH_B:
 		case RF_PATH_D:
 			u4RegValue = phy_query_bb_reg(Adapter, pPhyReg->rfintfs, bRFSI_RFENV << 16);
+			break;
+		default:
+			RTW_ERR("Invalid rf_path:%d\n", eRFPath);
 			break;
 		}
 
@@ -216,7 +214,7 @@ phy_RF6052_Config_ParaFile(
 #endif
 			{
 #ifdef CONFIG_EMBEDDED_FWIMG
-				if (HAL_STATUS_FAILURE == odm_config_rf_with_header_file(&pHalData->odmpriv, CONFIG_RF_RADIO, (enum odm_rf_radio_path_e)eRFPath))
+				if (odm_config_rf_with_header_file(&pHalData->odmpriv, CONFIG_RF_RADIO, eRFPath) == HAL_STATUS_FAILURE)
 					rtStatus = _FAIL;
 #endif
 			}
@@ -227,7 +225,7 @@ phy_RF6052_Config_ParaFile(
 #endif
 			{
 #ifdef CONFIG_EMBEDDED_FWIMG
-				if (HAL_STATUS_FAILURE == odm_config_rf_with_header_file(&pHalData->odmpriv, CONFIG_RF_RADIO, (enum odm_rf_radio_path_e)eRFPath))
+				if (odm_config_rf_with_header_file(&pHalData->odmpriv, CONFIG_RF_RADIO, eRFPath) == HAL_STATUS_FAILURE)
 					rtStatus = _FAIL;
 #endif
 			}
@@ -235,6 +233,9 @@ phy_RF6052_Config_ParaFile(
 		case RF_PATH_C:
 			break;
 		case RF_PATH_D:
+			break;
+		default:
+			RTW_ERR("Invalid rf_path:%d\n", eRFPath);
 			break;
 		}
 
@@ -247,6 +248,9 @@ phy_RF6052_Config_ParaFile(
 		case RF_PATH_B:
 		case RF_PATH_D:
 			phy_set_bb_reg(Adapter, pPhyReg->rfintfs, bRFSI_RFENV << 16, u4RegValue);
+			break;
+		default:
+			RTW_ERR("Invalid rf_path:%d\n", eRFPath);
 			break;
 		}
 
