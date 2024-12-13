@@ -141,3 +141,5 @@ kernel/configs/android-*.cfg
 #techpack/
 out/
 build.sh
+apollo_n0thunter.old
+arch/arm64/configs/nethunter_defconfig.old
