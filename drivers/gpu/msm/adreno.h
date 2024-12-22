@@ -110,6 +110,20 @@
 /* The target supports ringbuffer level APRIV */
 #define ADRENO_APRIV BIT(21)
 /*
+ * Use SHMEM for page allocation. There will be no support
+ * for pools and higher order pages.
+ */
+#define ADRENO_USE_SHMEM BIT(22)
+/*
+ * Make pages available for reclaim. Process foreground/background
+ * activity is known through sysfs exposed per process. Based on
+ * this, pages are unpinned and made available to Per Process
+ * Reclaim (PPR). SHMEM is used for allocation of pages and
+ * support for pools is removed.
+ */
+#define ADRENO_PROCESS_RECLAIM BIT(23)
+
+/*
  * Adreno GPU quirks - control bits for various workarounds
  */
 
@@ -240,6 +254,9 @@ struct adreno_gpudev;
 /* Time to allow preemption to complete (in ms) */
 #define ADRENO_PREEMPT_TIMEOUT 10000
 
+#define PREEMPT_SCRATCH_ADDR(dev, id) \
+	((dev)->preempt.scratch.gpuaddr + (id * sizeof(u64)))
+
 #define ADRENO_INT_BIT(a, _bit) (((a)->gpucore->gpudev->int_bits) ? \
 		(adreno_get_int(a, _bit) < 0 ? 0 : \
 		BIT(adreno_get_int(a, _bit))) : 0)
@@ -274,6 +291,7 @@ enum adreno_preempt_states {
  * skipsaverestore: To skip saverestore during L1 preemption (for 6XX)
  * usesgmem: enable GMEM save/restore across preemption (for 6XX)
  * count: Track the number of preemptions triggered
+ * @postamble_len: Number of dwords in KMD postamble pm4 packet
  */
 struct adreno_preemption {
 	atomic_t state;
@@ -284,6 +302,7 @@ struct adreno_preemption {
 	bool skipsaverestore;
 	bool usesgmem;
 	unsigned int count;
+	u32 postamble_len;
 };
 
 
@@ -542,6 +561,11 @@ struct adreno_device {
 	bool gpuhtw_llc_slice_enable;
 	unsigned int zap_loaded;
 	unsigned int soc_hw_rev;
+	/*
+	 * @perfcounter: Flag to clear perfcounters across contexts and
+	 * controls perfcounter ioctl read
+	 */
+	bool perfcounter;
 };
 
 /**
