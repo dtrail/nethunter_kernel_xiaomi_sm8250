@@ -73,8 +73,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_0>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			capacity-dmips-mhz = <448>;
-			dynamic-power-coefficient = <89>;
+			capacity-dmips-mhz = <446>;
+			dynamic-power-coefficient = <132>;
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -104,8 +104,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_1>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			capacity-dmips-mhz = <448>;
-			dynamic-power-coefficient = <89>;
+			capacity-dmips-mhz = <446>;
+			dynamic-power-coefficient = <132>;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -129,8 +129,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_2>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			capacity-dmips-mhz = <448>;
-			dynamic-power-coefficient = <89>;
+			capacity-dmips-mhz = <446>;
+			dynamic-power-coefficient = <132>;
 			L2_2: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -154,8 +154,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_3>;
 			qcom,freq-domain = <&cpufreq_hw 0 4>;
-			capacity-dmips-mhz = <448>;
-			dynamic-power-coefficient = <89>;
+			capacity-dmips-mhz = <446>;
+			dynamic-power-coefficient = <132>;
 			L2_3: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -179,8 +179,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_4>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			capacity-dmips-mhz = <1023>;
-			dynamic-power-coefficient = <304>;
+			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <354>;
 			#cooling-cells = <2>;
 			L2_4: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -205,8 +205,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_5>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			capacity-dmips-mhz = <1023>;
-			dynamic-power-coefficient = <304>;
+			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <354>;
 			L2_5: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -230,8 +230,8 @@
 			cpu-release-addr = <0x0 0x90000000>;
 			next-level-cache = <&L2_6>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
-			capacity-dmips-mhz = <1023>;
-			dynamic-power-coefficient = <304>;
+			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <354>;
 			L2_6: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -256,7 +256,7 @@
 			next-level-cache = <&L2_7>;
 			qcom,freq-domain = <&cpufreq_hw 2 4>;
 			capacity-dmips-mhz = <1024>;
-			dynamic-power-coefficient = <386>;
+			dynamic-power-coefficient = <432>;
 			#cooling-cells = <2>;
 			L2_7: l2-cache {
 			      compatible = "arm,arch-cache";
@@ -293,21 +293,21 @@
 			};
 
 			cluster1 {
-				core0 {
+				core4 {
 					cpu = <&CPU4>;
 				};
 
-				core1 {
+				core5 {
 					cpu = <&CPU5>;
 				};
 
-				core2 {
+				core6 {
 					cpu = <&CPU6>;
 				};
 			};
 
 			cluster2 {
-				core0 {
+				core7 {
 					cpu = <&CPU7>;
 				};
 			};
@@ -350,7 +350,7 @@
 	};
 
 	chosen {
-		bootargs = "quiet noirqdebug nodebugmon rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off cgroup_disable=pressure";
+		bootargs = "noirqdebug nodebugmon rcupdate.rcu_expedited=1 rcu_nocbs=0-3 kpti=off cgroup_disable=pressure,memory";
 	};
 
 	firmware: firmware {
@@ -518,12 +518,7 @@
 			reg = <0x0 0x9c000000 0x0 0x02300000>;
 			label = "cont_splash_region";
 		};
-
-		disp_rdump_memory: disp_rdump_region@9c000000 {
-			reg = <0x0 0x9c000000 0x0 0x02400000>;
-			label = "disp_rdump_region";
-		};
-
+	
 		dfps_data_memory: dfps_data_region@9e300000 {
 			reg = <0x0 0x9e300000 0x0 0x0100000>;
 			label = "dfps_data_region";
@@ -3339,7 +3334,7 @@
 
 		/* PM QoS */
 		qcom,pm-qos-cpu-groups = <0x0f 0xf0>;
-		qcom,pm-qos-cpu-group-latency-us = <70 70>;
+		qcom,pm-qos-cpu-group-latency-us = <100 100>;
 		qcom,pm-qos-default-cpu = <0>;
 
 		/*
@@ -5234,10 +5229,8 @@
 
 	qcom,cpufreq-table-0 =
 			<1171200>,
-			<1248000>,
 			<1344000>,
 			<1420800>,
-			<1516800>,
 			<1612800>,
 			<1708800>,
 			<1804800>;
@@ -5247,13 +5240,11 @@
 			< 940800>,
 			<1056000>,
 			<1171200>,
-			<1286400>,
 			<1382400>,
 			<1478400>,
 			<1574400>,
 			<1670400>,
 			<1766400>,
-			<1862400>,
 			<1958400>,
 			<2054400>,
 			<2150400>,
@@ -5266,7 +5257,6 @@
 			< 960000>,
 			<1075200>,
 			<1190400>,
-			<1305600>,
 			<1401600>,
 			<1516800>,
 			<1632000>,
@@ -5274,13 +5264,11 @@
 			<1862400>,
 			<1977600>,
 			<2073600>,
-			<2169600>,
 			<2265600>,
 			<2361600>,
 			<2457600>,
 			<2553600>,
 			<2649600>,
 			<2745600>,
-			<2841600>,
-			<3187200>;
+			<2841600>;
 };
