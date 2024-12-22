@@ -519,22 +519,11 @@
 			label = "cont_splash_region";
 		};
 
-		disp_rdump_memory: disp_rdump_region@9c000000 {
-			reg = <0x0 0x9c000000 0x0 0x02400000>;
-			label = "disp_rdump_region";
-		};
-
 		dfps_data_memory: dfps_data_region@9e300000 {
 			reg = <0x0 0x9e300000 0x0 0x0100000>;
 			label = "dfps_data_region";
 		};
 
-		dump_mem: mem_dump_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			size = <0 0x2800000>;
-		};
 		sp_mem: sp_region {  /* SPSS-HLOS ION shared mem */
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
@@ -589,7 +578,7 @@
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
 			reusable;
 			alignment = <0x0 0x400000>;
-			size = <0x0 0x8000000>;
+			size = <0x0 0x2000000>;
 			linux,cma-default;
 		};
 
@@ -770,102 +759,6 @@
 			reg = <0x17c2d000 0x1000>;
 			status = "disabled";
 		};
-	};
-
-	jtag_mm0: jtagmm@7040000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7040000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU0>;
-		status = "disabled";
-	};
-
-	jtag_mm1: jtagmm@7140000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7140000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU1>;
-		status = "disabled";
-	};
-
-	jtag_mm2: jtagmm@7240000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7240000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU2>;
-		status = "disabled";
-	};
-
-	jtag_mm3: jtagmm@7340000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7340000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU3>;
-		status = "disabled";
-	};
-
-	jtag_mm4: jtagmm@7440000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7440000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU4>;
-		status = "disabled";
-	};
-
-	jtag_mm5: jtagmm@7540000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7540000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU5>;
-		status = "disabled";
-	};
-
-	jtag_mm6: jtagmm@7640000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7640000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU6>;
-		status = "disabled";
-	};
-
-	jtag_mm7: jtagmm@7740000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x7740000 0x1000>;
-		reg-names = "etm-base";
-
-		clocks = <&clock_aop QDSS_CLK>;
-		clock-names = "core_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU7>;
-		status = "disabled";
 	};
 
 	qcom,devfreq-l3 {
@@ -4334,7 +4227,7 @@
 
 	mem_dump {
 		compatible = "qcom,mem-dump";
-		memory-region = <&dump_mem>;
+		status = "disabled";
 
 		c0_context {
 			qcom,dump-size = <0x800>;
@@ -5195,7 +5088,6 @@
 #include "kona-pinctrl.dtsi"
 #include "kona-smp2p.dtsi"
 #include "kona-usb.dtsi"
-#include "kona-coresight.dtsi"
 #include "kona-sde.dtsi"
 #include "kona-sde-pll.dtsi"
 #include "msm-rdbg.dtsi"
@@ -5234,10 +5126,8 @@
 
 	qcom,cpufreq-table-0 =
 			<1171200>,
-			<1248000>,
 			<1344000>,
 			<1420800>,
-			<1516800>,
 			<1612800>,
 			<1708800>,
 			<1804800>;
@@ -5247,13 +5137,11 @@
 			< 940800>,
 			<1056000>,
 			<1171200>,
-			<1286400>,
 			<1382400>,
 			<1478400>,
 			<1574400>,
 			<1670400>,
 			<1766400>,
-			<1862400>,
 			<1958400>,
 			<2054400>,
 			<2150400>,
@@ -5266,7 +5154,6 @@
 			< 960000>,
 			<1075200>,
 			<1190400>,
-			<1305600>,
 			<1401600>,
 			<1516800>,
 			<1632000>,
@@ -5274,13 +5161,11 @@
 			<1862400>,
 			<1977600>,
 			<2073600>,
-			<2169600>,
 			<2265600>,
 			<2361600>,
 			<2457600>,
 			<2553600>,
 			<2649600>,
 			<2745600>,
-			<2841600>,
-			<3187200>;
+			<2841600>;
 };
