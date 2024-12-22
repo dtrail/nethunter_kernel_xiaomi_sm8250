@@ -59,13 +59,6 @@ enum migratetype {
 #endif
 	MIGRATE_PCPTYPES, /* the number of types on the pcp lists */
 	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,
-#ifdef CONFIG_EMERGENCY_MEMORY
-	/*
-	 * MIGRATE_EMERGENCY migration type is designed to save
-	 * non-costly non-NOWARN page allocation failure.
-	 */
-	MIGRATE_EMERGENCY,
-#endif
 #ifdef CONFIG_MEMORY_ISOLATION
 	MIGRATE_ISOLATE,	/* can't allocate from here */
 #endif
@@ -77,7 +70,11 @@ extern char * const migratetype_names[MIGRATE_TYPES];
 
 #ifdef CONFIG_CMA
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
-#  define is_migrate_cma_page(_page) (get_pageblock_migratetype(_page) == MIGRATE_CMA)
+#  define is_migrate_cma_page(_page) ({						\
+	int mt = get_pageblock_migratetype(_page);				\
+	bool ret = (mt == MIGRATE_ISOLATE || mt == MIGRATE_CMA) ? true : false;	\
+	ret;									\
+})
 #  define get_cma_migrate_type() MIGRATE_CMA
 #else
 #  define is_migrate_cma(migratetype) false
@@ -375,11 +372,6 @@ enum zone_type {
 
 #ifndef __GENERATING_BOUNDS_H
 
-#ifdef CONFIG_EMERGENCY_MEMORY
-/* The maximum number of pages in MIGRATE_EMERGENCY migration type */
-#define MAX_MANAGED_EMERGENCY 2048
-#endif
-
 struct zone {
 	/* Read-mostly fields */
 
@@ -388,10 +380,7 @@ struct zone {
 	unsigned long watermark_boost;
 
 	unsigned long nr_reserved_highatomic;
-#ifdef CONFIG_EMERGENCY_MEMORY
-	/* The actual number of pages in MIGRATE_EMERGENCY migration type */
-	unsigned long nr_reserved_emergency;
-#endif
+
 	/*
 	 * We don't know if the memory that we're going to allocate will be
 	 * freeable or/and it will be released eventually, so to avoid totally

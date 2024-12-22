@@ -636,15 +636,6 @@ config ZSMALLOC_STAT
 	  information to userspace via debugfs.
 	  If unsure, say N.
 
-config VMAP_LAZY_PURGING_FACTOR
-	int "multiplier to the size of purged vmap areas"
-	default "8" if ARM
-	default "32"
-	help
-	  It is used as a multiplier to the max VA pages purged in a
-	  single attempt. For 32-bit in order to reduce fragmentation
-	  of vmalloc space, we decrease the default value to "8".
-
 config ZSMALLOC_CHAIN_SIZE
 	int "Maximum number of physical pages per-zspage"
 	default 4
@@ -863,22 +854,6 @@ config ARCH_HAS_PTE_SPECIAL
 
 endmenu
 
-config PROCESS_RECLAIM
-	bool "Enable process reclaim"
-	depends on PROC_FS
-	default y
-	help
-	 It allows to reclaim pages of the process by /proc/pid/reclaim.
-
-	 (echo file > /proc/PID/reclaim) reclaims file-backed pages only.
-	 (echo anon > /proc/PID/reclaim) reclaims anonymous pages only.
-	 (echo all > /proc/PID/reclaim) reclaims all pages.
-
-	 (echo addr size-byte > /proc/PID/reclaim) reclaims pages in
-	 (addr, addr + size-bytes) of the process.
-
-	 Any other value is ignored.
-
 config FORCE_ALLOC_FROM_DMA_ZONE
 	bool "Force certain memory allocators to always return ZONE_DMA32 memory"
 	depends on ZONE_DMA32
@@ -892,11 +867,3 @@ config FORCE_ALLOC_FROM_DMA_ZONE
 config VMSTAT_INTERVAL
 	int "Default interval in seconds to update vmstat"
 	default 20
-
-config EMERGENCY_MEMORY
-	bool "Enable emergency memory"
-	default y if BOARD_XIAOMI
-	help
-	 This enables the migration type MIGRATE_EMERGENCY which reserves
-	 a small amount of memory for non-costly non-NOWARN page allocation
-	 failure.
