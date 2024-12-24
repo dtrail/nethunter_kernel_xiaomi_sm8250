@@ -519,22 +519,11 @@
 			label = "cont_splash_region";
 		};
 		
-		disp_rdump_memory: disp_rdump_region@9c000000 {
-			reg = <0x0 0x9c000000 0x0 0x02400000>;
-			label = "disp_rdump_region";
-		};
-		
 		dfps_data_memory: dfps_data_region@9e300000 {
 			reg = <0x0 0x9e300000 0x0 0x0100000>;
 			label = "dfps_data_region";
 		};
 
-		dump_mem: mem_dump_region {
-			compatible = "shared-dma-pool";
-			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
-			reusable;
-			size = <0 0x2800000>;
-		};
 		sp_mem: sp_region {  /* SPSS-HLOS ION shared mem */
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
@@ -4334,7 +4323,7 @@
 
 	mem_dump {
 		compatible = "qcom,mem-dump";
-		memory-region = <&dump_mem>;
+		status = "disabled";
 
 		c0_context {
 			qcom,dump-size = <0x800>;
@@ -5233,7 +5222,6 @@
 	interrupt-names = "dcvsh0_int", "dcvsh1_int", "dcvsh2_int";
 
 	qcom,cpufreq-table-0 =
-			<1171200>,
 			<1344000>,
 			<1420800>,
 			<1612800>,
