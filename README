@@ -1,3 +1,34 @@
+Apollo N0tHunter Kernel [4.19][AOSP]
+====================================
+
+- For Kali NetHunter 2024.X
+- Tested on LineageOS 21
+- Based on N0Kernel by EmanuelCN
+- Should boot on all Android 13+ AOSP-Roms (Android 15 is untested)
+- Supports all officially supported external devices (USB WI-FI adapters, HID devices, BT devices, etc.)
+- Additional support for RTL8188EUS-based chipsets (more devices coming up with later releases)
+- MIUI currently not support, but possible: You need Emanuel's modified N0Kernel DTBO Image for MIUI, which you can get on his Telegram channel.
+
+
+While keeping this repository mostly synced to N0Kernel, this kernel goes into a slightly different direction. 
+Apart from being a Kali NetHunter kernel it focuses more on power-efficiency and battery backup while retaining overall good performance.
+The Mi 10T Pro is powerful enough to have all these features and play next-gen mobile games, just in case you happen to run this on your daily driver or whatever.
+But in a general use-case we focus primarily on getting more battery life. This comes into handy, for example, when powering an additional external OTG-connected device.
+
+Feedback is always appreciated. You can get support on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051/
+
+Happy hunting ;-)
+
+
+
+
+
+
+
+
+
+
+
 Linux kernel
 ============
 
@@ -17,3 +48,6 @@ See Documentation/00-INDEX for a list of what is contained in each file.
 Please read the Documentation/process/changes.rst file, as it contains the
 requirements for building and running the kernel, and information about
 the problems which may result by upgrading your kernel.
+
+
+
