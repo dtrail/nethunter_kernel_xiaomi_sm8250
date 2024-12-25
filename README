@@ -7,6 +7,7 @@ Apollo N0tHunter Kernel [4.19][AOSP]
 - Should boot on all Android 13+ AOSP-Roms (Android 15 is untested)
 - Supports all officially supported external devices (USB WI-FI adapters, HID devices, BT devices, etc.)
 - Additional support for RTL8188EUS-based chipsets (more devices coming up with later releases)
+- Configured for better power-efficiency and battery life while retaining good performance
 - MIUI currently not support, but possible: You need Emanuel's modified N0Kernel DTBO Image for MIUI, which you can get on his Telegram channel.
 
 
@@ -21,6 +22,10 @@ Happy hunting ;-)
 
 
 
+**Credits to:
+        EmanuelCN (N0Kernel)
+        kvsnr113 (E404)
+        XDA-Forums
 
 
 
