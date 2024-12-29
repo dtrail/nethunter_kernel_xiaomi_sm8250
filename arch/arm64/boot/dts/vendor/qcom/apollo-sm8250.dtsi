@@ -1071,35 +1071,35 @@ this file is for attribution only of apollo
 		compatible = "operating-points-v2";
 		opp-683000000 {
 			opp-hz = /bits/ 64 <683000000>;
-			opp-microvolt = <254>;
+			opp-microvolt = <256>;
 		};
 		opp-606852000 {
 			opp-hz = /bits/ 64 <606852000>;
-			opp-microvolt = <172>;
+			opp-microvolt = <180>;
 		};
 		opp-530710000 {
 			opp-hz = /bits/ 64 <530710000>;
-			opp-microvolt = <152>;
+			opp-microvolt = <160>;
 		};
 		opp-454568000 {
 			opp-hz = /bits/ 64 <454568000>;
-			opp-microvolt = <92>;
+			opp-microvolt = <120>;
 		};
 		opp-378426000 {
 			opp-hz = /bits/ 64 <378426000>;
-			opp-microvolt = <32>;
+			opp-microvolt = <48>;
 		};
 		opp-262284000 {
 			opp-hz = /bits/ 64 <262284000>;
-			opp-microvolt = <28>;
+			opp-microvolt = <32>;
 		};
 		opp-216142000 {
 			opp-hz = /bits/ 64 <216142000>;
-			opp-microvolt = <24>;
+			opp-microvolt = <20>;
 		};
 		opp-138000000 {
 			opp-hz = /bits/ 64 <138000000>;
-			opp-microvolt = <20>;
+			opp-microvolt = <16>;
 		};
 	};
 };
