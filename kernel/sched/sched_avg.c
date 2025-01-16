@@ -25,8 +25,8 @@ static DEFINE_PER_CPU(u64, nr_max);
 static DEFINE_PER_CPU(spinlock_t, nr_lock) = __SPIN_LOCK_UNLOCKED(nr_lock);
 static s64 last_get_time;
 
-unsigned int sysctl_sched_busy_hyst_enable_cpus;
-unsigned int sysctl_sched_busy_hyst;
+unsigned int sysctl_sched_busy_hyst_enable_cpus = 1;
+unsigned int sysctl_sched_busy_hyst = 1;
 unsigned int sysctl_sched_coloc_busy_hyst_enable_cpus = 112;
 unsigned int sysctl_sched_coloc_busy_hyst = 39000000;
 unsigned int sysctl_sched_coloc_busy_hyst_max_ms = 5000;
