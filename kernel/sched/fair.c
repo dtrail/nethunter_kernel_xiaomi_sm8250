@@ -4260,16 +4260,11 @@ static inline unsigned long cfs_rq_load_avg(struct cfs_rq *cfs_rq)
 
 static int newidle_balance(struct rq *this_rq, struct rq_flags *rf);
 
-static inline unsigned long task_runnable(struct task_struct *p)
-{
-	return READ_ONCE(p->se.avg.runnable_avg);
-}
-
 static inline unsigned long _task_util_est(struct task_struct *p)
 {
 	struct util_est ue = READ_ONCE(p->se.avg.util_est);
 
-	return max(ue.ewma, (ue.enqueued & ~UTIL_AVG_UNCHANGED));
+	return (max(ue.ewma, ue.enqueued) | UTIL_AVG_UNCHANGED);
 }
 
 unsigned long task_util_est(struct task_struct *p)
@@ -4374,7 +4369,7 @@ static inline void util_est_update(struct cfs_rq *cfs_rq,
 	 * Reset EWMA on utilization increases, the moving average is used only
 	 * to smooth utilization decreases.
 	 */
-	ue.enqueued = task_util(p);
+	ue.enqueued = (task_util(p) | UTIL_AVG_UNCHANGED);
 	if (sched_feat(UTIL_EST_FASTUP)) {
 		if (ue.ewma < ue.enqueued) {
 			ue.ewma = ue.enqueued;
@@ -4403,13 +4398,6 @@ static inline void util_est_update(struct cfs_rq *cfs_rq,
 		return;
 
 	/*
-	 * To avoid underestimate of task utilization, skip updates of EWMA if
-	 * we cannot grant that thread got all CPU time it wanted.
-	 */
-	if ((ue.enqueued + UTIL_EST_MARGIN) < task_runnable(p))
-		goto done;
-
-	/*
 	 * Update Task's estimated utilization
 	 *
 	 * When *p completes an activation we can consolidate another sample
@@ -4430,7 +4418,6 @@ static inline void util_est_update(struct cfs_rq *cfs_rq,
 	ue.ewma  += last_ewma_diff;
 	ue.ewma >>= UTIL_EST_WEIGHT_SHIFT;
 done:
-	ue.enqueued |= UTIL_AVG_UNCHANGED;
 	WRITE_ONCE(p->se.avg.util_est, ue);
 
 	/* Update plots for Task's estimated utilization */
@@ -10973,7 +10960,7 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 			 */
 			env->migration_type = migrate_task;
 			lsub_positive(&nr_diff, local->sum_nr_running);
-			env->imbalance = nr_diff;
+			env->imbalance = nr_diff >> 1;
 		} else {
 
 			/*
@@ -10981,10 +10968,10 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 			 * idle cpus.
 			 */
 			env->migration_type = migrate_task;
-			env->imbalance = max_t(long, 0,
-					       (local->idle_cpus - busiest->idle_cpus));
+			env->imbalance = max_t(long, 0, (local->idle_cpus -
+						 busiest->idle_cpus) >> 1);
 		}
-#ifdef CONFIG_NUMA
+
 		/* Consider allowing a small imbalance between NUMA groups */
 		if (env->sd->flags & SD_NUMA) {
 			unsigned int imbalance_min;
@@ -11004,10 +10991,7 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 			if (busiest->sum_nr_running <= imbalance_min)
 				env->imbalance = 0;
 		}
-#endif
 
-		/* Number of tasks to move to restore balance */
-		env->imbalance >>= 1;
 		return;
 	}
 
