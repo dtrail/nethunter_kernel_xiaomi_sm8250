@@ -754,9 +754,6 @@ static int vruntime_eligible(struct cfs_rq *cfs_rq, u64 vruntime)
 
 int entity_eligible(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
-	if (!sched_feat(ENFORCE_ELIGIBILITY))
-		return 1;
-
 	return vruntime_eligible(cfs_rq, se->vruntime);
 }
 
@@ -1229,7 +1226,11 @@ static void update_curr(struct cfs_rq *cfs_rq)
 
 	account_cfs_rq_runtime(cfs_rq, delta_exec);
 
+<<<<<<< HEAD
 	if (cfs_rq->nr_running == 1)
+=======
+	if (rq->nr_running == 1)
+>>>>>>> f64325b3da61 (BACKPORT: sched/eevdf: Allow shorter slices to wakeup-preempt)
 		return;
 
 	if (resched || did_preempt_short(cfs_rq, curr)) {
@@ -4850,7 +4851,11 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 
 	se->vruntime = vruntime - lag;
 
+<<<<<<< HEAD
 	if (se->rel_deadline) {
+=======
+	if (sched_feat(PLACE_REL_DEADLINE) && se->rel_deadline) {
+>>>>>>> 8faa460c6323 (sched/fair: Avoid re-setting virtual deadline on 'migrations')
 		se->deadline += se->vruntime;
 		se->rel_deadline = 0;
 		return;
@@ -12956,6 +12961,20 @@ static void attach_task_cfs_rq(struct task_struct *p)
 static void switched_from_fair(struct rq *rq, struct task_struct *p)
 {
 	detach_task_cfs_rq(p);
+<<<<<<< HEAD
+=======
+	/*
+	 * Since this is called after changing class, this is a little weird
+	 * and we cannot use DEQUEUE_DELAYED.
+	 */
+	if (p->se.sched_delayed) {
+		dequeue_task(rq, p, DEQUEUE_NOCLOCK | DEQUEUE_SLEEP);
+		p->se.sched_delayed = 0;
+		p->se.rel_deadline = 0;
+		if (sched_feat(DELAY_ZERO) && p->se.vlag > 0)
+			p->se.vlag = 0;
+	}
+>>>>>>> 8faa460c6323 (sched/fair: Avoid re-setting virtual deadline on 'migrations')
 }
 
 static void switched_to_fair(struct rq *rq, struct task_struct *p)
