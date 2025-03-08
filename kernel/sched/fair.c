@@ -4465,6 +4465,7 @@ bias_to_this_cpu(struct task_struct *p, int cpu, int start_cpu)
 	return base_test && start_cap_test;
 }
 
+<<<<<<< HEAD
 static inline int util_fits_cpu(unsigned long util,
 				unsigned long uclamp_min,
 				unsigned long uclamp_max,
@@ -4600,6 +4601,8 @@ static inline int task_fits_cpu(struct task_struct *p, int cpu)
 	return (util_fits_cpu(util, uclamp_min, uclamp_max, cpu) > 0);
 }
 
+=======
+>>>>>>> 88fdb8b587b3 (sched/uclamp: Make task_fits_capacity() use util_fits_cpu())
 static inline int util_fits_cpu(unsigned long util,
 				unsigned long uclamp_min,
 				unsigned long uclamp_max,
@@ -4721,6 +4724,14 @@ static inline int util_fits_cpu(unsigned long util,
 		fits = fits && (uclamp_min <= capacity_orig_thermal);
 
 	return fits;
+}
+
+static inline int task_fits_cpu(struct task_struct *p, int cpu)
+{
+	unsigned long uclamp_min = uclamp_eff_value(p, UCLAMP_MIN);
+	unsigned long uclamp_max = uclamp_eff_value(p, UCLAMP_MAX);
+	unsigned long util = task_util_est(p);
+	return util_fits_cpu(util, uclamp_min, uclamp_max, cpu);
 }
 
 static inline bool task_fits_max(struct task_struct *p, int cpu)
