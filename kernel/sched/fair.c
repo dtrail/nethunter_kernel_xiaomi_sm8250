@@ -10814,8 +10814,7 @@ next_group:
 		struct root_domain *rd = env->dst_rq->rd;
 
 		/* update overload indicator if we are at root domain */
-		if (READ_ONCE(rd->overload) != (sg_status & SG_OVERLOAD))
-			WRITE_ONCE(rd->overload, sg_status & SG_OVERLOAD);
+		WRITE_ONCE(rd->overload, sg_status & SG_OVERLOAD);
 
 		/* Update over-utilization (tipping point, U >= 0) indicator */
 		WRITE_ONCE(rd->overutilized, sg_status & SG_OVERUTILIZED);
@@ -11602,12 +11601,8 @@ more_balance:
 		 * We do not want newidle balance, which can be very
 		 * frequent, pollute the failure counter causing
 		 * excessive cache_hot migrations and active balances.
-		 *
-		 * Similarly for migration_misfit which is not related to
-		 * load/util migration, don't pollute nr_balance_failed.
 		 */
-		if (idle != CPU_NEWLY_IDLE &&
-		    env.migration_type != migrate_misfit)
+		if (idle != CPU_NEWLY_IDLE)
 			sd->nr_balance_failed++;
 
 		if (need_active_balance(&env)) {
@@ -11697,8 +11692,7 @@ out_one_pinned:
 	 * skyrocketting in a short amount of time. Skip the balance_interval
 	 * increase logic to avoid that.
 	 */
-	if (env.idle == CPU_NEWLY_IDLE ||
-	    env.migration_type == migrate_misfit)
+	if (env.idle == CPU_NEWLY_IDLE)
 		goto out;
 
 	/* tune up the balancing interval */
