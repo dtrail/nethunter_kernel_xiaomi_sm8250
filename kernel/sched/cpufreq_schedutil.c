@@ -516,7 +516,7 @@ static unsigned long sugov_iowait_apply(struct sugov_cpu *sg_cpu, u64 time,
 static inline void ignore_dl_rate_limit(struct sugov_cpu *sg_cpu, struct sugov_policy *sg_policy)
 {
 	if (cpu_bw_dl(cpu_rq(sg_cpu->cpu)) > sg_cpu->bw_min)
-		sg_policy->limits_changed = true;
+		sg_policy->need_freq_update = true;
 }
 
 static void sugov_update_single(struct update_util_data *hook, u64 time,
