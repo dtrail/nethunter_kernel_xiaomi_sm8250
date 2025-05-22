@@ -652,7 +652,7 @@ EXPORT_SYMBOL(__close_fd); /* for ksys_close() */
  * The caller must ensure that filp_close() called on the file, and then
  * an fput().
  */
-int close_fd_get_file(unsigned int fd, struct file **res)
+int __close_fd_get_file(unsigned int fd, struct file **res)
 {
 	struct files_struct *files = current->files;
 	struct file *file;
