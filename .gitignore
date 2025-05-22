@@ -144,3 +144,5 @@ build.sh
 apollo_n0thunter.old
 arch/arm64/configs/nethunter_defconfig.old
 arch/arm64/configs/nethunter_defconfig.new
+*.rej
+*.orig
