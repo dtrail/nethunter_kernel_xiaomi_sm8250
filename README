@@ -2,10 +2,10 @@ Apollo N0tHunter Kernel [4.19][AOSP]
 ====================================
 
 - For Kali NetHunter 2024.X
-- Tested on LineageOS 21
+- Tested on LineageOS 21 - 22.2
 - Based on N0Kernel by EmanuelCN
 - Supports Magisk and KernelSU
-- Should boot on all Android 13+ AOSP-Roms (Android 15 is untested)
+- Should boot on all Android 13 - 15 AOSP-Roms
 - Supports all officially supported external devices (USB WI-FI adapters, HID devices, BT devices, etc.)
 - Additional support for RTL8188EUS-based chipsets (more devices coming up with later releases)
 - Configured for better power-efficiency and battery life while retaining good performance
@@ -20,6 +20,10 @@ But in a general use-case we focus primarily on getting more battery life. This 
 Feedback is always appreciated. You can get support on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051/
 
 Happy hunting ;-)
+
+
+DOWNLOAD
+STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases/tag/1.3.6RC
 
 
 
