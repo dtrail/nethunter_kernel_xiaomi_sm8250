@@ -1173,7 +1173,6 @@ static ssize_t __comp_algorithm_show(struct zram *zram, u32 prio, char *buf)
 
 static int __comp_algorithm_store(struct zram *zram, u32 prio, const char *buf)
 {
-#if 0
 	char *compressor;
 	size_t sz;
 
@@ -1204,7 +1203,6 @@ static int __comp_algorithm_store(struct zram *zram, u32 prio, const char *buf)
 
 	comp_algorithm_set(zram, prio, compressor);
 	up_write(&zram->init_lock);
-#endif
 	return 0;
 }
 
@@ -2431,8 +2429,9 @@ static ssize_t disksize_store(struct device *dev,
 	int err;
 	u32 prio;
 
-	disksize = PAGE_ALIGN((u64)SZ_4G);
-	pr_info("Setting zRAM size to %li GB", disksize / 1073741824);
+	disksize = memparse(buf, NULL);
+	if (!disksize)
+		return -EINVAL;
 
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
