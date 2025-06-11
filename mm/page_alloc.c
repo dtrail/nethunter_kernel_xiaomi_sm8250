@@ -3254,44 +3254,7 @@ static inline void zone_statistics(struct zone *preferred_zone, struct zone *z)
 #endif
 }
 
-#ifdef CONFIG_CMA
-/*
- * GFP_MOVABLE allocation could drain UNMOVABLE & RECLAIMABLE page blocks via
- * the help of CMA which makes GFP_KERNEL failed. Checking if zone_watermark_ok
- * again without ALLOC_CMA to see if to use CMA first.
- */
-static bool use_cma_first(struct zone *zone, unsigned int order, unsigned int alloc_flags)
-{
-	unsigned long watermark;
-	bool cma_first = false;
-
-	watermark = wmark_pages(zone, alloc_flags & ALLOC_WMARK_MASK);
-	/* check if GFP_MOVABLE pass previous zone_watermark_ok via the help of CMA */
-	if (zone_watermark_ok(zone, order, watermark, 0, alloc_flags & (~ALLOC_CMA))) {
-		/*
-		 * Balance movable allocations between regular and CMA areas by
-		 * allocating from CMA when over half of the zone's free memory
-		 * is in the CMA area.
-		 */
-		cma_first = (zone_page_state(zone, NR_FREE_CMA_PAGES) >
-				zone_page_state(zone, NR_FREE_PAGES) / 2);
-	} else {
-		/*
-		 * watermark failed means UNMOVABLE & RECLAIMBLE is not enough
-		 * now, we should use cma first to keep them stay around the
-		 * corresponding watermark
-		 */
-		cma_first = true;
-	}
-	return cma_first;
-}
-#else
-static bool use_cma_first(struct zone *zone, unsigned int order, unsigned int alloc_flags)
-{
-	return false;
-}
-#endif
-
+/* Remove page from the per-cpu list, caller must protect the list */
 static struct page *__rmqueue_pcplist(struct zone *zone, int migratetype,
 			unsigned int alloc_flags,
 			struct per_cpu_pages *pcp,
@@ -3385,7 +3348,7 @@ struct page *rmqueue(struct zone *preferred_zone,
 				trace_mm_page_alloc_zone_locked(page, order, migratetype);
 		}
 
-		if (!page && use_cma_first(zone, order, alloc_flags) &&
+		if (!page && migratetype == MIGRATE_MOVABLE &&
 				gfp_flags & __GFP_CMA)
 			page = __rmqueue_cma(zone, order);
 
@@ -4276,7 +4239,6 @@ static int
 __perform_reclaim(gfp_t gfp_mask, unsigned int order,
 					const struct alloc_context *ac)
 {
-	struct reclaim_state reclaim_state;
 	int progress;
 	unsigned int noreclaim_flag;
 	unsigned long pflags;
@@ -4288,13 +4250,10 @@ __perform_reclaim(gfp_t gfp_mask, unsigned int order,
 	psi_memstall_enter(&pflags);
 	fs_reclaim_acquire(gfp_mask);
 	noreclaim_flag = memalloc_noreclaim_save();
-	reclaim_state.reclaimed_slab = 0;
-	current->reclaim_state = &reclaim_state;
 
 	progress = try_to_free_pages(ac->zonelist, order, gfp_mask,
 								ac->nodemask);
 
-	current->reclaim_state = NULL;
 	memalloc_noreclaim_restore(noreclaim_flag);
 	fs_reclaim_release(gfp_mask);
 	psi_memstall_leave(&pflags);
@@ -4595,6 +4554,7 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 						struct alloc_context *ac)
 {
 	bool can_direct_reclaim = gfp_mask & __GFP_DIRECT_RECLAIM;
+	bool can_compact = gfp_compaction_allowed(gfp_mask);
 	const bool costly_order = order > PAGE_ALLOC_COSTLY_ORDER;
 	struct page *page = NULL;
 	unsigned int alloc_flags;
@@ -4672,7 +4632,7 @@ retry_cpuset:
 	 * Don't try this for allocations that are allowed to ignore
 	 * watermarks, as the ALLOC_NO_WATERMARKS attempt didn't yet happen.
 	 */
-	if (can_direct_reclaim &&
+	if (can_direct_reclaim && can_compact &&
 			(costly_order ||
 			   (order > 0 && ac->migratetype != MIGRATE_MOVABLE))
 			&& !gfp_pfmemalloc_allowed(gfp_mask)) {
@@ -4782,9 +4742,10 @@ retry:
 
 	/*
 	 * Do not retry costly high order allocations unless they are
-	 * __GFP_RETRY_MAYFAIL
+	 * __GFP_RETRY_MAYFAIL and we can compact
 	 */
-	if (costly_order && !(gfp_mask & __GFP_RETRY_MAYFAIL))
+	if (costly_order && (!can_compact ||
+			     !(gfp_mask & __GFP_RETRY_MAYFAIL)))
 		goto nopage;
 
 	if (should_reclaim_retry(gfp_mask, order, ac, alloc_flags,
@@ -4797,7 +4758,7 @@ retry:
 	 * implementation of the compaction depends on the sufficient amount
 	 * of free memory (see __compaction_suitable)
 	 */
-	if (did_some_progress > 0 &&
+	if (did_some_progress > 0 && can_compact &&
 			should_compact_retry(ac, order, alloc_flags,
 				compact_result, &compact_priority,
 				&compaction_retries))
@@ -5144,6 +5105,18 @@ refill:
 		/* reset page count bias and offset to start of new frag */
 		nc->pagecnt_bias = PAGE_FRAG_CACHE_MAX_SIZE + 1;
 		offset = size - fragsz;
+		if (unlikely(offset < 0)) {
+			/*
+			 * The caller is trying to allocate a fragment
+			 * with fragsz > PAGE_SIZE but the cache isn't big
+			 * enough to satisfy the request, this may
+			 * happen in low memory conditions.
+			 * We don't release the cache page because
+			 * it could make memory pressure worse
+			 * so we simply return NULL here.
+			 */
+			return NULL;
+		}
 	}
 
 	nc->pagecnt_bias--;
