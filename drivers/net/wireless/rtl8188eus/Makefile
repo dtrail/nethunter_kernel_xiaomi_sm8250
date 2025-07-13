@@ -1,20 +1,15 @@
+EXTRA_CFLAGS += $(CFLAGS)
 EXTRA_CFLAGS += $(USER_EXTRA_CFLAGS) -fno-pie
-EXTRA_CFLAGS += -O1
-#EXTRA_CFLAGS += -O3
 EXTRA_CFLAGS += -Wno-unused-variable
 EXTRA_CFLAGS += -Wno-unused-value
 EXTRA_CFLAGS += -Wno-unused-label
 EXTRA_CFLAGS += -Wno-unused-parameter
 EXTRA_CFLAGS += -Wno-unused-function
 EXTRA_CFLAGS += -Wno-unused
-EXTRA_CFLAGS += -Wno-address
-EXTRA_CFLAGS += -Wno-cast-function-type
-#EXTRA_CFLAGS += -Wno-discarded-qualifiers
-EXTRA_CFLAGS += -Wno-uninitialized
-EXTRA_CFLAGS += -Wno-sometimes-uninitialized
-EXTRA_CFLAGS += -Wno-enum-conversion
 EXTRA_CFLAGS += -Wno-vla
 EXTRA_CFLAGS += -Wno-date-time
+EXTRA_CFLAGS += -Wno-missing-prototypes
+EXTRA_CFLAGS += -Wno-missing-declarations
 
 
 GCC_VER_49 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 4.9 | bc )
@@ -22,7 +17,7 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-EXTRA_CFLAGS += -I$(src)/include -I$(srctree)/$(src)/include
+EXTRA_CFLAGS += -I$(src)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -229,11 +224,10 @@ _HAL_INTFS_FILES :=	hal/hal_intf.o \
 			hal/led/hal_$(HCI_NAME)_led.o
 
 
-EXTRA_CFLAGS += -I$(src)/platform -I$(srctree)/$(src)/platform
+EXTRA_CFLAGS += -I$(src)/platform
 _PLATFORM_FILES := platform/platform_ops.o
 
-EXTRA_CFLAGS += -I$(src)/hal/btc -I$(srctree)/$(src)/hal/btc
-EXTRA_CFLAGS += -I$(src)/hal/phydm -I$(srctree)/$(src)/hal/phydm
+EXTRA_CFLAGS += -I$(src)/hal/btc
 
 ########### HAL_RTL8188E #################################
 ifeq ($(CONFIG_RTL8188E), y)
@@ -2055,6 +2049,27 @@ endif
 
 obj-$(CONFIG_RTL8188EU) := $(MODULE_NAME).o
 
+# Support for kernel 6.15+ configuration
+KVER = $(shell uname -r)
+KMAJ = $(shell echo $(KVER) | \
+sed -e 's/^\([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*.*/\1/')
+KMIN = $(shell echo $(KVER) | \
+sed -e 's/^[0-9][0-9]*\.\([0-9][0-9]*\)\.[0-9][0-9]*.*/\1/')
+KREV = $(shell echo $(KVER) | \
+sed -e 's/^[0-9][0-9]*\.[0-9][0-9]*\.\([0-9][0-9]*\).*/\1/')
+GET_KERNEL_VERSION = $(shell \
+echo test | awk '{if($(KMAJ) < $(1)) {print 0} else { \
+if($(KMAJ) > $(1)) {print 1} else { \
+if($(KMIN) < $(2)) {print 0} else { \
+if($(KMIN) > $(2)) {print 1} else { \
+if($(KREV) < $(3)) {print 0} else { print 1 } \
+}}}}}' \
+)
+
+ifeq ($(call GET_KERNEL_VERSION,6,15,0),1)
+ccflags-y = $(EXTRA_CFLAGS)
+endif
+
 else
 
 export CONFIG_RTL8188EU = m
@@ -2117,17 +2132,19 @@ config_r:
 .PHONY: modules clean
 
 clean:
-	#$(MAKE) -C $(KSRC) M=$(shell pwd) clean
-	cd hal ; rm -fr */*/*/*.mod.c */*/*/*.mod */*/*/*.o */*/*/.*.cmd */*/*/*.ko
-	cd hal ; rm -fr */*/*.mod.c */*/*.mod */*/*.o */*/.*.cmd */*/*.ko
-	cd hal ; rm -fr */*.mod.c */*.mod */*.o */.*.cmd */*.ko
-	cd hal ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd core ; rm -fr */*.mod.c */*.mod */*.o */.*.cmd */*.ko
-	cd core ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd os_dep/linux ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd os_dep ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd platform ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	rm -fr Module.symvers ; rm -fr Module.markers ; rm -fr modules.order
-	rm -fr *.mod.c *.mod *.o .*.cmd *.ko *~
-	rm -fr .tmp_versions
+	@#$(MAKE) -C $(KSRC) M=$(shell pwd) clean
+	@cd hal && rm -frv */*/*/*.mod.c */*/*/*.mod */*/*/*.o */*/*/.*.cmd */*/*/*.ko 2>/dev/null || true
+	@cd hal && rm -frv */*/*.mod.c */*/*.mod */*/*.o */*/.*.cmd */*/*.ko 2>/dev/null || true
+	@cd hal && rm -frv */*.mod.c */*.mod */*.o */.*.cmd */*.ko 2>/dev/null || true
+	@cd hal && rm -frv *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
+	@cd core && rm -fr */*.mod.c */*.mod */*.o */.*.cmd */*.ko 2>/dev/null || true
+	@cd core && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
+	@cd os_dep/linux && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
+	@cd os_dep && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
+	@cd platform && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
+	@rm -frv Module.symvers 2>/dev/null || true
+	@rm -frv Module.markers 2>/dev/null || true
+	@rm -frv modules.order 2>/dev/null || true
+	@rm -frv *.mod.c *.mod *.o .*.cmd *.ko *~ 2>/dev/null || true
+	@rm -frv .tmp_versions 2>/dev/null || true
 endif
