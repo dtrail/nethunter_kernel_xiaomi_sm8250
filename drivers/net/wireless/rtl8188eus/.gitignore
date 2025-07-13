@@ -1,0 +1,17 @@
+# Local reports
+/log
+
+# Build
+build/
+
+# Raw build
+*.mod
+*.mod.c
+*.o
+*.o.d
+.*.cmd
+*.ko
+Module.symvers
+Module.markers
+modules.order
+.tmp_versions

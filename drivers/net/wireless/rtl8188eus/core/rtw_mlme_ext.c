@@ -1832,11 +1832,11 @@ void mgt_dispatcher(_adapter *padapter, union recv_frame *precv_frame)
 		else
 			ptable->func = &OnAuthClient;
 		_mgt_dispatcher(padapter, ptable, precv_frame);
-//#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-//	__attribute__ ((fallthrough));
-//#else
-//			__attribute__ ((fallthrough));
-//#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
+		__attribute__ ((fallthrough));
+/* #else
+ 		__attribute__ ((__fallthrough__)); */
+#endif
         break;
 	case WIFI_ASSOCREQ:
 	case WIFI_REASSOCREQ:
@@ -2669,12 +2669,12 @@ unsigned int OnAuth(_adapter *padapter, union recv_frame *precv_frame)
 				rtw_list_delete(&pstat->asoc_list);
 				pstapriv->asoc_list_cnt--;
 				if (pstat->expire_to > 0)
-					;/* TODO: STA re_auth within expire_to */
+				{ /* TODO: STA re_auth within expire_to */ }
 			}
 			_exit_critical_bh(&pstapriv->asoc_list_lock, &irqL);
 
 			if (seq == 1)
-				; /* TODO: STA re_auth and auth timeout */
+			{ /* TODO: STA re_auth and auth timeout */ }
 
 		}
 	}
