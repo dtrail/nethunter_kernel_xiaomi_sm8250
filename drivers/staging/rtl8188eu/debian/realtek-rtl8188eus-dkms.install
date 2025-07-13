@@ -1,0 +1,2 @@
+core hal include Kconfig Makefile os_dep platform usr/src/realtek-rtl8188eus-${env:DEB_VERSION_UPSTREAM}
+debian/r8188eus-dkms.conf etc/modprobe.d

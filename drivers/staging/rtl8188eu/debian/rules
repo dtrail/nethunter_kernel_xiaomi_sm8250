@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+export DEB_VERSION_UPSTREAM
+
+%:
+	dh $@
+
+override_dh_dkms:
+	# Force PACKAGE_VERSION to be DEB_VERSION_UPSTREAM
+	sed -i dkms.conf -e 's%^PACKAGE_VERSION=.*%PACKAGE_VERSION="$(DEB_VERSION_UPSTREAM)"%'
+	dh_dkms -- dkms.conf
+
+execute_after_dh_fixperms:
+	find debian/realtek-rtl8188eus-dkms/usr/src -type f -exec chmod -x {} \;
+
+# Nothing to configure, build or auto-install (all is done after
+# installation using dkms)
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_install:

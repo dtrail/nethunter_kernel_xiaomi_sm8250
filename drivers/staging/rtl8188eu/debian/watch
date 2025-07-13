@@ -1,0 +1,9 @@
+version=4
+opts="mode=git, pretty=5.3.9~git%cd.%h, pgpmode=none" \
+  https://github.com/aircrack-ng/rtl8188eus.git \
+  HEAD debian debian/script-targz
+
+# Use the following when upstream starts to tag releases:
+#opts="filenamemangle=s%(?:.*?)?v?(\d[\d.]*)\.tar\.gz%realtek-rtl8188eus-dkms-$1.tar.gz%" \
+#   https://github.com/aircrack-ng/rtl8188eus/tags \
+#   (?:.*?/)?v?(\d[\d.]*)\.tar\.gz debian uupdate

@@ -1,0 +1,18 @@
+Source: realtek-rtl8188eus-dkms
+Section: contrib/kernel
+Priority: optional
+Maintainer: Kali Developers <devel@kali.org>
+Uploaders: Sophie Brun <sophie@offensive-security.com>
+Build-Depends: debhelper-compat (= 13), dh-sequence-dkms
+Standards-Version: 4.6.2
+Homepage: https://github.com/aircrack-ng/rtl8188eus
+Vcs-Browser: https://gitlab.com/kalilinux/packages/realtek-rtl8188eus-dkms
+Vcs-Git: https://gitlab.com/kalilinux/packages/realtek-rtl8188eus-dkms.git
+
+Package: realtek-rtl8188eus-dkms
+Architecture: all
+Depends: dkms (>= 1.95), ${misc:Depends}
+Description: Realtek RTL8188EUS driver in DKMS format
+ This package provides the source code for RTL8188EUS Linux driver (with
+ monitor mode and frame injection) to be build with dkms. Kernel sources or
+ headers are required to compile this module.
