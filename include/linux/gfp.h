@@ -626,7 +626,7 @@ static inline bool pm_suspended_storage(void)
 /* The below functions must be run on a range from a single zone. */
 extern int alloc_contig_range(unsigned long start, unsigned long end,
 			      unsigned migratetype, gfp_t gfp_mask);
-extern void free_contig_range(unsigned long pfn, unsigned nr_pages);
+extern void free_contig_range(unsigned long pfn, unsigned long nr_pages);
 #endif
 
 #ifdef CONFIG_CMA
