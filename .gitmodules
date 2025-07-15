@@ -4,3 +4,6 @@
 [submodule "KernelSU"]
 	path = KernelSU
 	url = https://github.com/EmanuelCN/KernelSU.git
+[submodule "drivers/net/wireless/mt7921"]
+	path = drivers/net/wireless/mt7921
+	url = https://github.com/apriorit/mt7921.git
