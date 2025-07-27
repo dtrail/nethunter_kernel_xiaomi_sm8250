@@ -40,5 +40,5 @@ obj-$(CONFIG_CNSS_GENL) += cnss_genl/
 
 obj-$(CONFIG_RTL8188EU) += rtl8188eus/
 
-obj-$(CONFIG_MT7921E) += mt7921/mt76/
+obj-$(WLAN_VENDOR_MEDIATEK) += mt7921/
 
