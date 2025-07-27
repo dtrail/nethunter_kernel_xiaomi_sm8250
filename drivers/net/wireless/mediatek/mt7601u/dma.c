@@ -1,6 +1,14 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2015 Jakub Kicinski <kubakici@wp.pl>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 #include "mt7601u.h"
@@ -74,8 +82,7 @@ bad_frame:
 }
 
 static void mt7601u_rx_process_seg(struct mt7601u_dev *dev, u8 *data,
-				   u32 seg_len, struct page *p,
-				   struct list_head *list)
+				   u32 seg_len, struct page *p)
 {
 	struct sk_buff *skb;
 	struct mt7601u_rxwi *rxwi;
@@ -105,13 +112,9 @@ static void mt7601u_rx_process_seg(struct mt7601u_dev *dev, u8 *data,
 	if (!skb)
 		return;
 
-	local_bh_disable();
-	rcu_read_lock();
-
-	ieee80211_rx_list(dev->hw, NULL, skb, list);
-
-	rcu_read_unlock();
-	local_bh_enable();
+	spin_lock(&dev->mac_lock);
+	ieee80211_rx(dev->hw, skb);
+	spin_unlock(&dev->mac_lock);
 }
 
 static u16 mt7601u_rx_next_seg_len(u8 *data, u32 data_len)
@@ -121,9 +124,9 @@ static u16 mt7601u_rx_next_seg_len(u8 *data, u32 data_len)
 	u16 dma_len = get_unaligned_le16(data);
 
 	if (data_len < min_seg_len ||
-	    WARN_ON_ONCE(!dma_len) ||
-	    WARN_ON_ONCE(dma_len + MT_DMA_HDRS > data_len) ||
-	    WARN_ON_ONCE(dma_len & 0x3))
+	    WARN_ON(!dma_len) ||
+	    WARN_ON(dma_len + MT_DMA_HDRS > data_len) ||
+	    WARN_ON(dma_len & 0x3))
 		return 0;
 
 	return MT_DMA_HDRS + dma_len;
@@ -135,7 +138,6 @@ mt7601u_rx_process_entry(struct mt7601u_dev *dev, struct mt7601u_dma_buf_rx *e)
 	u32 seg_len, data_len = e->urb->actual_length;
 	u8 *data = page_address(e->p);
 	struct page *new_p = NULL;
-	LIST_HEAD(list);
 	int cnt = 0;
 
 	if (!test_bit(MT7601U_STATE_INITIALIZED, &dev->state))
@@ -146,8 +148,7 @@ mt7601u_rx_process_entry(struct mt7601u_dev *dev, struct mt7601u_dma_buf_rx *e)
 		new_p = dev_alloc_pages(MT_RX_ORDER);
 
 	while ((seg_len = mt7601u_rx_next_seg_len(data, data_len))) {
-		mt7601u_rx_process_seg(dev, data, seg_len,
-				       new_p ? e->p : NULL, &list);
+		mt7601u_rx_process_seg(dev, data, seg_len, new_p ? e->p : NULL);
 
 		data_len -= seg_len;
 		data += seg_len;
@@ -156,8 +157,6 @@ mt7601u_rx_process_entry(struct mt7601u_dev *dev, struct mt7601u_dma_buf_rx *e)
 
 	if (cnt > 1)
 		trace_mt_rx_dma_aggr(dev, cnt, !!new_p);
-
-	netif_receive_skb_list(&list);
 
 	if (new_p) {
 		/* we have one extra ref from the allocator */
@@ -200,12 +199,11 @@ static void mt7601u_complete_rx(struct urb *urb)
 	case -ECONNRESET:
 	case -ESHUTDOWN:
 	case -ENOENT:
-	case -EPROTO:
 		return;
 	default:
 		dev_err_ratelimited(dev->dev, "rx urb failed: %d\n",
 				    urb->status);
-		fallthrough;
+		/* fall through */
 	case 0:
 		break;
 	}
@@ -221,9 +219,9 @@ out:
 	spin_unlock_irqrestore(&dev->rx_lock, flags);
 }
 
-static void mt7601u_rx_tasklet(struct tasklet_struct *t)
+static void mt7601u_rx_tasklet(unsigned long data)
 {
-	struct mt7601u_dev *dev = from_tasklet(dev, t, rx_tasklet);
+	struct mt7601u_dev *dev = (struct mt7601u_dev *) data;
 	struct mt7601u_dma_buf_rx *e;
 
 	while ((e = mt7601u_rx_get_pending_entry(dev))) {
@@ -246,12 +244,11 @@ static void mt7601u_complete_tx(struct urb *urb)
 	case -ECONNRESET:
 	case -ESHUTDOWN:
 	case -ENOENT:
-	case -EPROTO:
 		return;
 	default:
 		dev_err_ratelimited(dev->dev, "tx urb failed: %d\n",
 				    urb->status);
-		fallthrough;
+		/* fall through */
 	case 0:
 		break;
 	}
@@ -276,9 +273,9 @@ out:
 	spin_unlock_irqrestore(&dev->tx_lock, flags);
 }
 
-static void mt7601u_tx_tasklet(struct tasklet_struct *t)
+static void mt7601u_tx_tasklet(unsigned long data)
 {
-	struct mt7601u_dev *dev = from_tasklet(dev, t, tx_tasklet);
+	struct mt7601u_dev *dev = (struct mt7601u_dev *) data;
 	struct sk_buff_head skbs;
 	unsigned long flags;
 
@@ -515,10 +512,10 @@ static int mt7601u_alloc_tx(struct mt7601u_dev *dev)
 
 int mt7601u_dma_init(struct mt7601u_dev *dev)
 {
-	int ret;
+	int ret = -ENOMEM;
 
-	tasklet_setup(&dev->tx_tasklet, mt7601u_tx_tasklet);
-	tasklet_setup(&dev->rx_tasklet, mt7601u_rx_tasklet);
+	tasklet_init(&dev->tx_tasklet, mt7601u_tx_tasklet, (unsigned long) dev);
+	tasklet_init(&dev->rx_tasklet, mt7601u_rx_tasklet, (unsigned long) dev);
 
 	ret = mt7601u_alloc_tx(dev);
 	if (ret)
