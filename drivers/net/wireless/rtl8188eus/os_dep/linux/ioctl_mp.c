@@ -2129,7 +2129,6 @@ int rtw_efuse_mask_file(struct net_device *dev,
 			struct iw_request_info *info,
 			union iwreq_data *wrqu, char *extra)
 {
-	char maskfileBufferStr[8] = {0};
 	char *rtw_efuse_mask_file_path;
 	u8 Status;
 	PADAPTER padapter = rtw_netdev_priv(dev);
@@ -2154,7 +2153,7 @@ int rtw_efuse_mask_file(struct net_device *dev,
 	}
 	if (strncmp(extra, "data,", 5) == 0) {
 		u8	*pch, *pdata;
-		char	*ptmp, tmp, count_str[8] = {0};
+		char	*ptmp, tmp;
 		u8	count = 0;
 		u8	i = 0;
 		u32	datalen = 0;
@@ -2184,18 +2183,11 @@ int rtw_efuse_mask_file(struct net_device *dev,
 		 } while (count < 64);
 
 		for (i = 0; i < count; i++)
-    {
-			strcat(extra, ":");
-			sprintf(maskfileBufferStr, "%92x", maskfileBuffer[i]);
-			strcat(extra, maskfileBufferStr);
-    }
+			sprintf(extra, "%s:%02x", extra, maskfileBuffer[i]);
 
 		padapter->registrypriv.bFileMaskEfuse = _TRUE;
 
-		strcat(extra, "\nLoad Efuse Mask data ");
-		sprintf(count_str, "%d", count);
-		strcat(extra, count_str);
-		strcat(extra, " hex ok\n");
+		sprintf(extra, "%s\nLoad Efuse Mask data %d hex ok\n", extra, count);
 		wrqu->data.length = strlen(extra);
 		return 0;
 	}
