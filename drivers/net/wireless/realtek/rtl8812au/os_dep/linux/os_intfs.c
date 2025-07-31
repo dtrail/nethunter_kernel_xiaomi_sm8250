@@ -17,10 +17,6 @@
 #include <drv_types.h>
 #include <hal_data.h>
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0))
-#define strlcpy strscpy
-#endif
-
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Realtek Wireless Lan Driver");
 MODULE_AUTHOR("Realtek Semiconductor Corp.");
@@ -75,14 +71,6 @@ int rtw_scan_mode = 1;/* active, passive */
 	int rtw_lps_level = LPS_NORMAL;
 	int rtw_lps_chk_by_tp = 0;
 #endif /* CONFIG_POWER_SAVING */
-
-int rtw_monitor_overwrite_seqnum = 0;
-module_param(rtw_monitor_overwrite_seqnum, int, 0644);
-MODULE_PARM_DESC(rtw_monitor_overwrite_seqnum, "Overwrite the sequence number of injected frames");
-
-int rtw_monitor_retransmit = 0;
-module_param(rtw_monitor_retransmit, int, 0644);
-MODULE_PARM_DESC(rtw_monitor_retransmit, "Retransmit injected frames");
 
 int rtw_monitor_disable_1m = 0;
 module_param(rtw_monitor_disable_1m, int, 0644);
@@ -738,6 +726,9 @@ MODULE_PARM_DESC(rtw_dynamic_soml_delay, "SOML training delay");
 int _netdev_open(struct net_device *pnetdev);
 int netdev_open(struct net_device *pnetdev);
 static int netdev_close(struct net_device *pnetdev);
+#ifdef CONFIG_PLATFORM_INTEL_BYT
+extern int rtw_sdio_set_power(int on);
+#endif /* CONFIG_PLATFORM_INTEL_BYT */
 
 #ifdef CONFIG_MCC_MODE
 /* enable MCC mode or not */
@@ -1232,8 +1223,6 @@ uint loadparam(_adapter *padapter)
 	registry_par->fw_tbtt_rpt = rtw_tbtt_rpt;
 #endif
 
-	registry_par->monitor_overwrite_seqnum = (u8)rtw_monitor_overwrite_seqnum;
-	registry_par->monitor_retransmit = (u8)rtw_monitor_retransmit;
 	registry_par->monitor_disable_1m = (u8)rtw_monitor_disable_1m;
 
 	return status;
@@ -1289,7 +1278,7 @@ static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 	}
 
 	_rtw_memcpy(adapter_mac_addr(padapter), sa->sa_data, ETH_ALEN); /* set mac addr to adapter */
-	eth_hw_addr_set(pnetdev, sa->sa_data); /* set mac addr to net_device */
+	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
 
 #if 0
 	if (rtw_is_hw_init_completed(padapter)) {
@@ -1377,7 +1366,7 @@ unsigned int rtw_classify8021d(struct sk_buff *skb)
 
 static u16 rtw_select_queue(struct net_device *dev, struct sk_buff *skb
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0)
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0) || RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,0)
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
 	, struct net_device *sb_dev
 	#else
 	, void *accel_priv
@@ -1738,11 +1727,7 @@ int rtw_os_ndev_register(_adapter *adapter, const char *name)
 	u8 rtnl_lock_needed = rtw_rtnl_lock_needed(dvobj);
 
 #ifdef CONFIG_RTW_NAPI
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)) || (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 0))
-	netif_napi_add_weight(ndev, &adapter->napi, rtw_recv_napi_poll, RTL_NAPI_WEIGHT);
-#else
 	netif_napi_add(ndev, &adapter->napi, rtw_recv_napi_poll, RTL_NAPI_WEIGHT);
-#endif
 #endif /* CONFIG_RTW_NAPI */
 
 #if defined(CONFIG_IOCTL_CFG80211)
@@ -1758,7 +1743,7 @@ int rtw_os_ndev_register(_adapter *adapter, const char *name)
 	/* alloc netdev name */
 	rtw_init_netdev_name(ndev, name);
 
-	eth_hw_addr_set(ndev, adapter_mac_addr(adapter));
+	_rtw_memcpy(ndev->dev_addr, adapter_mac_addr(adapter), ETH_ALEN);
 #if defined(CONFIG_NET_NS)
     dev_net_set(ndev, wiphy_net(adapter_to_wiphy(adapter)));
 #endif //defined(CONFIG_NET_NS)
@@ -2705,6 +2690,32 @@ int _netdev_vir_if_open(struct net_device *pnetdev)
 	if (!primary_padapter)
 		goto _netdev_virtual_iface_open_error;
 
+#ifdef CONFIG_PLATFORM_INTEL_BYT
+	if (padapter->bup == _FALSE) {
+		u8 mac[ETH_ALEN];
+
+		/* get mac address from primary_padapter */
+		if (primary_padapter->bup == _FALSE)
+			rtw_macaddr_cfg(adapter_mac_addr(primary_padapter), get_hal_mac_addr(primary_padapter));
+
+		_rtw_memcpy(mac, adapter_mac_addr(primary_padapter), ETH_ALEN);
+
+		/*
+		* If the BIT1 is 0, the address is universally administered.
+		* If it is 1, the address is locally administered
+		*/
+		mac[0] |= BIT(1);
+
+		_rtw_memcpy(adapter_mac_addr(padapter), mac, ETH_ALEN);
+
+#ifdef CONFIG_MI_WITH_MBSSID_CAM
+		rtw_mbid_camid_alloc(padapter, adapter_mac_addr(padapter));
+#endif
+		rtw_init_wifidirect_addrs(padapter, adapter_mac_addr(padapter), adapter_mac_addr(padapter));
+		_rtw_memcpy(pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
+	}
+#endif /*CONFIG_PLATFORM_INTEL_BYT*/
+
 	if (primary_padapter->bup == _FALSE || !rtw_is_hw_init_completed(primary_padapter))
 		_netdev_open(primary_padapter->pnetdev);
 
@@ -3432,6 +3443,10 @@ int _netdev_open(struct net_device *pnetdev)
 
 	padapter->netif_up = _TRUE;
 
+#ifdef CONFIG_PLATFORM_INTEL_BYT
+	rtw_sdio_set_power(1);
+#endif /* CONFIG_PLATFORM_INTEL_BYT */
+
 	#ifdef CONFIG_AUTOSUSPEND
 	if (pwrctrlpriv->ps_flag == _TRUE) {
 		padapter->net_closed = _FALSE;
@@ -3440,6 +3455,15 @@ int _netdev_open(struct net_device *pnetdev)
 	#endif
 
 	if (padapter->bup == _FALSE) {
+#ifdef CONFIG_PLATFORM_INTEL_BYT
+		rtw_macaddr_cfg(adapter_mac_addr(padapter),  get_hal_mac_addr(padapter));
+#ifdef CONFIG_MI_WITH_MBSSID_CAM
+		rtw_mbid_camid_alloc(padapter, adapter_mac_addr(padapter));
+#endif
+		rtw_init_wifidirect_addrs(padapter, adapter_mac_addr(padapter), adapter_mac_addr(padapter));
+		_rtw_memcpy(pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
+#endif /* CONFIG_PLATFORM_INTEL_BYT */
+
 		rtw_clr_surprise_removed(padapter);
 		rtw_clr_drv_stopped(padapter);
 
@@ -3482,6 +3506,11 @@ int _netdev_open(struct net_device *pnetdev)
 		padapter->bup = _TRUE;
 		pwrctrlpriv->bips_processing = _FALSE;
 
+#ifdef CONFIG_PLATFORM_INTEL_BYT
+#ifdef CONFIG_BT_COEXIST
+		rtw_btcoex_IpsNotify(padapter, IPS_NONE);
+#endif /* CONFIG_BT_COEXIST */
+#endif /* CONFIG_PLATFORM_INTEL_BYT		 */
 	}
 	padapter->net_closed = _FALSE;
 
@@ -3820,6 +3849,7 @@ static int netdev_close(struct net_device *pnetdev)
 #endif /* CONFIG_BT_COEXIST_SOCKET_TRX */
 
 	RTW_INFO(FUNC_NDEV_FMT" , bup=%d\n", FUNC_NDEV_ARG(pnetdev), padapter->bup);
+#ifndef CONFIG_PLATFORM_INTEL_BYT
 	#ifdef CONFIG_AUTOSUSPEND
 	if (pwrctl->bInternalAutoSuspend == _TRUE) {
 		/* rtw_pwr_wakeup(padapter); */
@@ -3850,6 +3880,7 @@ static int netdev_close(struct net_device *pnetdev)
 		if (pnetdev)
 			rtw_netif_stop_queue(pnetdev);
 
+#ifndef CONFIG_ANDROID
 		/* s2. */
 		LeaveAllPowerSaveMode(padapter);
 		rtw_disassoc_cmd(padapter, 500, RTW_CMDF_WAIT_ACK);
@@ -3859,8 +3890,7 @@ static int netdev_close(struct net_device *pnetdev)
 		rtw_free_assoc_resources_cmd(padapter, _TRUE, RTW_CMDF_WAIT_ACK);
 		/* s2-4. */
 		rtw_free_network_queue(padapter, _TRUE);
-		// Close LED
-		rtw_led_control(padapter, LED_CTL_POWER_OFF);
+#endif
 	}
 
 #ifdef CONFIG_BR_EXT
@@ -3892,6 +3922,26 @@ static int netdev_close(struct net_device *pnetdev)
 	else
 		RTW_INFO("CONFIG_BT_COEXIST: VIRTUAL_ADAPTER\n");
 #endif /* CONFIG_BT_COEXIST_SOCKET_TRX */
+#else /* !CONFIG_PLATFORM_INTEL_BYT */
+
+	if (pwrctl->bInSuspend == _TRUE) {
+		RTW_INFO("+871x_drv - drv_close, bInSuspend=%d\n", pwrctl->bInSuspend);
+		return 0;
+	}
+
+	rtw_scan_abort(padapter); /* stop scanning process before wifi is going to down */
+#ifdef CONFIG_IOCTL_CFG80211
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
+#endif
+
+	RTW_INFO("netdev_close, bips_processing=%d\n", pwrctl->bips_processing);
+	while (pwrctl->bips_processing == _TRUE) /* waiting for ips_processing done before call rtw_dev_unload() */
+		rtw_msleep_os(1);
+
+	rtw_dev_unload(padapter);
+	rtw_sdio_set_power(0);
+
+#endif /* !CONFIG_PLATFORM_INTEL_BYT */
 
 	RTW_INFO("-871x_drv - drv_close, bup=%d\n", padapter->bup);
 
@@ -3969,9 +4019,7 @@ static int route_dump(u32 *gw_addr , int *gw_index)
 	struct msghdr msg;
 	struct iovec iov;
 	struct sockaddr_nl nladdr;
-#ifdef set_fs
 	mm_segment_t oldfs;
-#endif
 	char *pg;
 	int size = 0;
 
@@ -4009,18 +4057,16 @@ static int route_dump(u32 *gw_addr , int *gw_index)
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_flags = MSG_DONTWAIT;
-#ifdef set_fs
+
 	oldfs = get_fs();
 	set_fs(KERNEL_DS);
-#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
 	err = sock_sendmsg(sock, &msg);
 #else
 	err = sock_sendmsg(sock, &msg, sizeof(req));
 #endif
-#ifdef set_fs
 	set_fs(oldfs);
-#endif
+
 	if (err < 0)
 		goto out_sock;
 
@@ -4043,18 +4089,16 @@ restart:
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 		iov_iter_init(&msg.msg_iter, READ, &iov, 1, PAGE_SIZE);
 #endif
-#ifdef set_fs
+
 		oldfs = get_fs();
 		set_fs(KERNEL_DS);
-#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0))
 		err = sock_recvmsg(sock, &msg, MSG_DONTWAIT);
 #else
 		err = sock_recvmsg(sock, &msg, PAGE_SIZE, MSG_DONTWAIT);
 #endif
-#ifdef set_fs
 		set_fs(oldfs);
-#endif
+
 		if (err < 0)
 			goto out_sock_pg;
 
@@ -4124,18 +4168,15 @@ done:
 		msg.msg_controllen = 0;
 		msg.msg_flags = MSG_DONTWAIT;
 
-#ifdef set_fs
 		oldfs = get_fs();
 		set_fs(KERNEL_DS);
-#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
 		err = sock_sendmsg(sock, &msg);
 #else
 		err = sock_sendmsg(sock, &msg, sizeof(req));
 #endif
-#ifdef set_fs
 		set_fs(oldfs);
-#endif
+
 		if (err > 0)
 			goto restart;
 	}
