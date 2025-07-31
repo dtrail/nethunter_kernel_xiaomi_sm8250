@@ -595,7 +595,6 @@ void set_channel_bwmode(_adapter *padapter, unsigned char channel, unsigned char
 		RTW_INFO("[%s] ch = %d, offset = %d, bwmode = %d\n", __func__, channel, channel_offset, bwmode);
 
 	center_ch = rtw_get_center_ch(channel, bwmode, channel_offset);
-
 	if (bwmode == CHANNEL_WIDTH_80) {
 		if (center_ch > channel)
 			chnl_offset80 = HAL_PRIME_CHNL_OFFSET_LOWER;
@@ -3224,12 +3223,13 @@ void rtw_parse_sta_vendor_ie_8812(_adapter *adapter, struct sta_info *sta, u8 *t
 		goto exit;
 	else {
 		if(*(p+1) > 6 ) {
-			for(i=0; i<9;i++)
+			for(i=0; i<9;i++) {
 				RTW_INFO("p[%d]=0x%x",i,*(p+i) );
 				RTW_INFO("\n");
+			}
 			if(*(p+6) != 2)
 				goto exit;
-			
+
 			if(*(p+8) == RT_HT_CAP_USE_JAGUAR_BCUT)
 				sta->vendor_8812 = TRUE;
 			else if (*(p+8) == RT_HT_CAP_USE_JAGUAR_CCUT)
@@ -4744,7 +4744,9 @@ int rtw_dev_nlo_info_set(struct pno_nlo_info *nlo_info, pno_ssid_t *ssid,
 
 	int i = 0;
 	struct file *fp;
+#ifdef set_fs
 	mm_segment_t fs;
+#endif
 	loff_t pos = 0;
 	u8 *source = NULL;
 	long len = 0;
@@ -4780,10 +4782,10 @@ int rtw_dev_nlo_info_set(struct pno_nlo_info *nlo_info, pno_ssid_t *ssid,
 		RTW_INFO("Error, cipher array using default value.\n");
 		return 0;
 	}
-
+#ifdef set_fs
 	fs = get_fs();
 	set_fs(KERNEL_DS);
-
+#endif
 	source = rtw_zmalloc(2048);
 
 	if (source != NULL) {
@@ -4791,10 +4793,10 @@ int rtw_dev_nlo_info_set(struct pno_nlo_info *nlo_info, pno_ssid_t *ssid,
 		rtw_parse_cipher_list(nlo_info, source);
 		rtw_mfree(source, 2048);
 	}
-
+#ifdef set_fs
 	set_fs(fs);
+#endif
 	filp_close(fp, NULL);
-
 	RTW_INFO("-%s-\n", __func__);
 	return 0;
 }

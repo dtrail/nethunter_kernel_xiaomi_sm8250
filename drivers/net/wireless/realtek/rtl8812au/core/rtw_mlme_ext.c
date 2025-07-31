@@ -258,7 +258,6 @@ void rtw_txpwr_init_regd(struct rf_ctl_t *rfctl)
 		);
 		if (rfctl->regd_name)
 			break;
-		__attribute__ ((__fallthrough__));
 	default:
 		rfctl->regd_name = regd_str(TXPWR_LMT_WW);
 		RTW_PRINT("assign %s for default case\n", regd_str(TXPWR_LMT_WW));
@@ -1343,11 +1342,6 @@ void mgt_dispatcher(_adapter *padapter, union recv_frame *precv_frame)
 			ptable->func = &OnAuth;
 		else
 			ptable->func = &OnAuthClient;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
-	__attribute__ ((fallthrough));
-#else
-			__attribute__ ((__fallthrough__));
-#endif
 	case WIFI_ASSOCREQ:
 	case WIFI_REASSOCREQ:
 		_mgt_dispatcher(padapter, ptable, precv_frame);
@@ -1976,6 +1970,12 @@ unsigned int OnBeacon(_adapter *padapter, union recv_frame *precv_frame)
 
 #if 0 /* move to validate_recv_mgnt_frame */
 				psta->sta_stats.rx_mgnt_pkts++;
+#endif
+
+#if defined(CONFIG_IOCTL_CFG80211)
+				rtw_cfg80211_cqm_rssi_update(
+					padapter,
+					pmlmepriv->cur_network_scanned->network.Rssi);
 #endif
 			}
 
@@ -13947,13 +13947,13 @@ u8 createbss_hdl(_adapter *padapter, u8 *pbuf)
 		flush_all_cam_entry(padapter);
 
 		pdev_network->Length = get_WLAN_BSSID_EX_sz(pdev_network);
-		_rtw_memcpy(pnetwork, pdev_network, FIELD_OFFSET(WLAN_BSSID_EX, IELength));
-		pnetwork->IELength = pdev_network->IELength;
-
-		if (pnetwork->IELength > MAX_IE_SZ) {
+		if (FIELD_OFFSET(WLAN_BSSID_EX, IELength) > MAX_IE_SZ) {
 			ret = H2C_PARAMETERS_ERROR;
 			goto ibss_post_hdl;
 		}
+
+		memcpy(pnetwork, pdev_network, FIELD_OFFSET(WLAN_BSSID_EX, IELength));
+		pnetwork->IELength = pdev_network->IELength;
 
 		_rtw_memcpy(pnetwork->IEs, pdev_network->IEs, pnetwork->IELength);
 		start_create_ibss(padapter);

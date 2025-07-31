@@ -2572,21 +2572,7 @@ sint wlanhdr_to_ethhdr(union recv_frame *precvframe)
 		/* ptr -= 16; */
 		/* _rtw_memcpy(ptr, get_rxmem(precvframe), 16); */
 	} else {
-#ifdef PLATFORM_OS_XP
-		NDIS_PACKET_8021Q_INFO VlanPriInfo;
-		UINT32 UserPriority = precvframe->u.hdr.attrib.priority;
-		UINT32 VlanID = (pvlan != NULL ? get_vlan_id(pvlan) : 0);
 
-		VlanPriInfo.Value =          /* Get current value. */
-			NDIS_PER_PACKET_INFO_FROM_PACKET(precvframe->u.hdr.pkt, Ieee8021QInfo);
-
-		VlanPriInfo.TagHeader.UserPriority = UserPriority;
-		VlanPriInfo.TagHeader.VlanId =  VlanID ;
-
-		VlanPriInfo.TagHeader.CanonicalFormatId = 0; /* Should be zero. */
-		VlanPriInfo.TagHeader.Reserved = 0; /* Should be zero. */
-		NDIS_PER_PACKET_INFO_FROM_PACKET(precvframe->u.hdr.pkt, Ieee8021QInfo) = VlanPriInfo.Value;
-#endif
 	}
 
 	if (eth_type == 0x8712) { /* append rx status for mp test packets */
@@ -2603,8 +2589,6 @@ sint wlanhdr_to_ethhdr(union recv_frame *precvframe)
 	_rtw_memcpy(ptr + 12, &eth_type, 2);
 
 exit:
-
-
 	return ret;
 }
 #endif
@@ -3990,7 +3974,7 @@ static sint fill_radiotap_hdr(_adapter *padapter, union recv_frame *precvframe, 
 
 	u8 data_rate[] = {
 		2, 4, 11, 22, /* CCK */
-		12, 18, 24, 36, 48, 72, 93, 108, /* OFDM */
+		12, 18, 24, 36, 48, 72, 96, 108, /* OFDM */
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, /* HT MCS index */
 		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, /* VHT Nss 1 */
@@ -4851,7 +4835,7 @@ void rx_query_phy_status(
 	wlanhdr = get_recvframe_data(precvframe);
 
 	ta = get_ta(wlanhdr);
-	ra = get_ra(wlanhdr);
+	ra = wifi_get_ra(wlanhdr);
 	is_ra_bmc = IS_MCAST(ra);
 
 	if (_rtw_memcmp(adapter_mac_addr(padapter), ta, ETH_ALEN) == _TRUE) {
@@ -4991,7 +4975,7 @@ s32 pre_recv_entry(union recv_frame *precvframe, u8 *pphy_status)
 {
 	s32 ret = _SUCCESS;
 	u8 *pbuf = precvframe->u.hdr.rx_data;
-	u8 *pda = get_ra(pbuf);
+	u8 *pda = wifi_get_ra(pbuf);
 	u8 ra_is_bmc = IS_MCAST(pda);
 	_adapter *primary_padapter = precvframe->u.hdr.adapter;
 #ifdef CONFIG_CONCURRENT_MODE

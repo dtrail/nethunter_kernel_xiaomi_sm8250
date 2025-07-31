@@ -181,7 +181,7 @@ void hal_mpt_CCKTxPowerAdjust(PADAPTER Adapter, BOOLEAN bInCH14)
 	} else if (IS_HARDWARE_TYPE_8723D(Adapter)) {
 		/* 2.4G CCK TX DFIR */
 		/* 2016.01.20 Suggest from RS BB mingzhi*/
-		if ((u1Channel == 14)) {
+		if (u1Channel == 14) {
 			phy_set_bb_reg(Adapter, rCCK0_TxFilter2, bMaskDWord, 0x0000B81C);
 			phy_set_bb_reg(Adapter, rCCK0_DebugPort, bMaskDWord, 0x00000000);
 			phy_set_bb_reg(Adapter, 0xAAC, bMaskDWord, 0x00003667);
@@ -608,6 +608,7 @@ VOID mpt_ToggleIG_8814A(PADAPTER	pAdapter)
 	u1Byte Path = 0;
 	u4Byte IGReg = rA_IGI_Jaguar, IGvalue = 0;
 
+	/* // kimocoder: Disable below as it's not in use.
 	for (Path; Path <= RF_PATH_D; Path++) {
 		switch (Path) {
 		case RF_PATH_B:
@@ -623,11 +624,12 @@ VOID mpt_ToggleIG_8814A(PADAPTER	pAdapter)
 			IGReg = rA_IGI_Jaguar;
 			break;
 		}
+	*/
 
-		IGvalue = phy_query_bb_reg(pAdapter, IGReg, bMaskByte0);
-		phy_set_bb_reg(pAdapter, IGReg, bMaskByte0, IGvalue + 2);
-		phy_set_bb_reg(pAdapter, IGReg, bMaskByte0, IGvalue);
-	}
+	IGvalue = phy_query_bb_reg(pAdapter, IGReg, bMaskByte0);
+	phy_set_bb_reg(pAdapter, IGReg, bMaskByte0, IGvalue + 2);
+	phy_set_bb_reg(pAdapter, IGReg, bMaskByte0, IGvalue);
+
 }
 
 VOID mpt_SetRFPath_8814A(PADAPTER	pAdapter)
@@ -914,7 +916,7 @@ mpt_SetSingleTone_8814A(
 
 		phy_set_bb_reg(pAdapter, rCCAonSec_Jaguar, BIT1, 0x1); /*/ Disable CCA*/
 
-		for (StartPath; StartPath <= EndPath; StartPath++) {
+		for (; StartPath <= EndPath; StartPath++) {
 			phy_set_rf_reg(pAdapter, StartPath, RF_AC_Jaguar, 0xF0000, 0x2); /*/ Tx mode: RF0x00[19:16]=4'b0010 */
 			phy_set_rf_reg(pAdapter, StartPath, RF_AC_Jaguar, 0x1F, 0x0); /*/ Lowest RF gain index: RF_0x0[4:0] = 0*/
 
@@ -952,7 +954,7 @@ mpt_SetSingleTone_8814A(
 			EndPath = RF_PATH_D;
 			break;
 		}
-		for (StartPath; StartPath <= EndPath; StartPath++)
+		for (; StartPath <= EndPath; StartPath++)
 			phy_set_rf_reg(pAdapter, StartPath, lna_low_gain_3, BIT1, 0x0); /* RF LO disabled */
 
 		phy_set_bb_reg(pAdapter, rCCAonSec_Jaguar, BIT1, 0x0); /* Enable CCA*/

@@ -1414,7 +1414,11 @@ exit:
 	pmptx->pallocated_buf = NULL;
 	pmptx->stop = 1;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
 	thread_exit(NULL);
+#else
+	kthread_thread_exit(NULL);
+#endif
 	return 0;
 }
 
@@ -2406,7 +2410,7 @@ u32 mp_query_psd(PADAPTER pAdapter, u8 *data)
 			psd_data = rtw_GetPSDData(pAdapter, i - psd_pts);
 		else
 			psd_data = rtw_GetPSDData(pAdapter, i);
-		sprintf(data, "%s%x ", data, psd_data);
+		sprintf(data + strlen(data), "%x ", psd_data);
 		i++;
 	}
 

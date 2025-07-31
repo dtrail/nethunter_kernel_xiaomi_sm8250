@@ -194,9 +194,6 @@ struct security_priv {
 	u32 ndisencryptstatus;	/* NDIS_802_11_ENCRYPTION_STATUS */
 
 	NDIS_802_11_WEP ndiswep;
-#ifdef PLATFORM_WINDOWS
-	u8 KeyMaterial[16];/* variable length depending on above field. */
-#endif
 
 	u8 assoc_info[600];
 	u8 szofcapability[256]; /* for wpa2 usage */
@@ -253,12 +250,6 @@ struct security_priv {
 #else
 #define SEC_IS_BIP_KEY_INSTALLED(sec) _FALSE
 #endif
-
-struct sha256_state {
-	u64 length;
-	u32 state[8], curlen;
-	u8 buf[64];
-};
 
 #define GET_ENCRY_ALGO(psecuritypriv, psta, encry_algo, bmcst)\
 	do {\
