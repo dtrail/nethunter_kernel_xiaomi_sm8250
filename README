@@ -1,10 +1,10 @@
-Apollo N0tHunter Kernel [4.19][AOSP]
+Apollo / Alioth N0tHunter Kernel [4.19][AOSP]
 ====================================
 
 - For Kali NetHunter 2025.X
 - Tested on LineageOS 21 - 22.2
 - Based on N0Kernel by EmanuelCN
-- Supports Magisk and KernelSU
+- Supports Magisk only
 - Should boot on all Android 13 - 15 AOSP-Roms
 - Supports all officially supported external devices (USB WI-FI adapters, HID devices, BT devices, CAN, etc.)
 - Additional support for RTL8188EUS-based chipsets and 88XX-based devices (more devices coming up with later releases)
@@ -14,7 +14,7 @@ Apollo N0tHunter Kernel [4.19][AOSP]
 
 While keeping this repository mostly synced to N0Kernel, this kernel goes into a slightly different direction. 
 Apart from being a Kali NetHunter kernel it focuses more on power-efficiency and battery backup while retaining overall good performance.
-The Mi 10T Pro is powerful enough to have all these features and play next-gen mobile games, just in case you happen to run this on your daily driver or whatever.
+The QComm SM8250 is powerful enough to have all these features and play next-gen mobile games, just in case you happen to run this on your daily driver or whatever.
 But in a general use-case we focus primarily on getting more battery life. This comes into handy, for example, when powering an additional external OTG-connected device.
 
 Feedback is always appreciated. You can get support on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051/
@@ -23,8 +23,8 @@ Happy hunting ;-)
 
 
 DOWNLOAD
-STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases/tag/1.3.6RC
-XPERIMENTAL: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases/tag/1.4.0RC
+STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases
+
 
 
 **Credits to:
