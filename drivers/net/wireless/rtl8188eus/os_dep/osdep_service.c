@@ -1267,12 +1267,11 @@ u32 _rtw_down_sema(_sema *sema)
 
 inline void thread_exit(_completion *comp)
 {
-
 #ifdef PLATFORM_LINUX
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0))
-	complete_and_exit(comp, 0);
-#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
 	kthread_complete_and_exit(comp, 0);
+#else
+	complete_and_exit(comp, 0);
 #endif
 #endif
 
@@ -2428,8 +2427,7 @@ int rtw_change_ifname(_adapter *padapter, const char *ifname)
 	rereg_priv = &padapter->rereg_nd_name_priv;
 
 	/* free the old_pnetdev */
-	if (rereg_priv->old_pnetdev)
-	{
+	if (rereg_priv->old_pnetdev) {
 		free_netdev(rereg_priv->old_pnetdev);
 		rereg_priv->old_pnetdev = NULL;
 	}
@@ -2444,20 +2442,25 @@ int rtw_change_ifname(_adapter *padapter, const char *ifname)
 	rereg_priv->old_pnetdev = cur_pnetdev;
 
 	pnetdev = rtw_init_netdev(padapter);
-	if (!pnetdev) { ret = -1; goto error; }
+	if (!pnetdev)  {
+		ret = -1;
+		goto error;
+	}
 
 	SET_NETDEV_DEV(pnetdev, dvobj_to_dev(adapter_to_dvobj(padapter)));
 
 	rtw_init_netdev_name(pnetdev, ifname);
 
-	_rtw_memcpy((void*)pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
+	_rtw_memcpy((void *)pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
 
 	if (rtnl_lock_needed)
 		ret = register_netdev(pnetdev);
 	else
 		ret = register_netdevice(pnetdev);
 
-	if (ret != 0) { goto error; }
+	if (ret != 0) {
+		goto error;
+	}
 
 	return 0;
 
@@ -2571,15 +2574,13 @@ u64 rtw_division64(u64 x, u64 y)
 inline u32 rtw_random32(void)
 {
 #ifdef PLATFORM_LINUX
-	u32 random_int;
-	get_random_bytes(&random_int , 4);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 4))
-	return get_random_u32_below(random_int);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
-	return prandom_u32_max(random_int);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+        return get_random_u32();
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	return prandom_u32();
 #elif (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 18))
+	u32 random_int;
+	get_random_bytes(&random_int , 4);
 	return random_int;
 #else
 	return random32();
@@ -2785,7 +2786,7 @@ int map_readN(const struct map_t *map, u16 offset, u16 len, u8 *buf)
 			else
 				c_len = seg->sa + seg->len - offset;
 		}
-
+			
 		_rtw_memcpy(c_dst, c_src, c_len);
 	}
 
@@ -2969,7 +2970,7 @@ void dump_blacklist(void *sel, _queue *blist, const char *title)
 	if (rtw_end_of_queue_search(head, list) == _FALSE) {
 		if (title)
 			RTW_PRINT_SEL(sel, "%s:\n", title);
-
+	
 		while (rtw_end_of_queue_search(head, list) == _FALSE) {
 			ent = LIST_CONTAINOR(list, struct blacklist_ent, list);
 			list = get_next(list);
@@ -3113,3 +3114,4 @@ int hexstr2bin(const char *hex, u8 *buf, size_t len)
 	}
 	return 0;
 }
+
