@@ -202,7 +202,7 @@ endif
 export KBUILD_CHECKSRC KBUILD_EXTMOD KBUILD_SRC
 
 objtree		:= .
-src		:= $(srctree)
+src		:= $(srctree)PHONY += $(O)/include/config/auto.conf
 obj		:= $(objtree)
 
 VPATH		:= $(srctree)$(if $(KBUILD_EXTMOD),:$(KBUILD_EXTMOD))
@@ -610,7 +610,7 @@ virt-y		:= virt/
 endif # KBUILD_EXTMOD
 
 ifeq ($(dot-config),1)
-include include/config/auto.conf
+include kali-nethunter-kernel/out/include/config/auto.conf
 endif
 
 # The all: target is the default when no target is given on the
@@ -641,7 +641,7 @@ ifeq ($(may-sync-config),1)
 # Read in dependencies to all Kconfig* files, make sure to run syncconfig if
 # changes are detected. This should be included after arch/$(SRCARCH)/Makefile
 # because some architectures define CROSS_COMPILE there.
-include include/config/auto.conf.cmd
+include kali-nethunter-kernel/out/include/config/auto.conf
 
 # To avoid any implicit rule to kick in, define an empty command
 $(KCONFIG_CONFIG): ;
@@ -658,7 +658,7 @@ else
 # External modules and some install targets need include/generated/autoconf.h
 # and include/config/auto.conf but do not care if they are up-to-date.
 # Use auto.conf to trigger the test
-PHONY += include/config/auto.conf
+PHONY += $(O)/include/config/auto.conf
 
 include/config/auto.conf:
 	$(Q)test -e include/generated/autoconf.h -a -e $@ || (		\
