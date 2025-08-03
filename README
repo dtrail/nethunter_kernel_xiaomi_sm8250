@@ -5,12 +5,14 @@ Apollo / Alioth N0tHunter Kernel [4.19][AOSP]
 - Tested on LineageOS 21 - 22.2
 - Based on N0Kernel by EmanuelCN
 - Supports Magisk only
-- Should boot on all Android 13 - 15 AOSP-Roms
+- Tested on Android 13 - 15 AOSP-Roms
 - Supports all officially supported external devices (USB WI-FI adapters, HID devices, BT devices, CAN, etc.)
-- Additional support for RTL8188EUS-based chipsets and 88XX-based devices (more devices coming up with later releases)
+- Additional support for non-standard Realtek USB adapters (88xx, 8188eus, etc.)
+- Full support for CAN-Arsenal, USB-Arsenal, HID-Attacks
 - Configured for better power-efficiency and battery life while retaining good performance
 - MIUI possible: You need Emanuel's modified N0Kernel DTBO Image for MIUI, which you can get on his Telegram channel (N0Kernel releases).
 
+NOTE: I'm probably soon switching sources to LOS-Kernel due to some issues I couldn't fix with N0Kernel source, such as kernel modules support and compatiblity to certain firmwares (not Nethunter related).
 
 While keeping this repository mostly synced to N0Kernel, this kernel goes into a slightly different direction. 
 Apart from being a Kali NetHunter kernel it focuses more on power-efficiency and battery backup while retaining overall good performance.
