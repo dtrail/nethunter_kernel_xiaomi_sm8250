@@ -117,7 +117,7 @@ void qdf_set_wake_up_idle(bool idle)
 }
 #endif /* PF_WAKE_UP_IDLE */
 
-/* qdf_export_symbol(qdf_set_wake_up_idle);*/
+qdf_export_symbol(qdf_set_wake_up_idle);
 
 void qdf_set_user_nice(qdf_thread_t *thread, long nice)
 {
