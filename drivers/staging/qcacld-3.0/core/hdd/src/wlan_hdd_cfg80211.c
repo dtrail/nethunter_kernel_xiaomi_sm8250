@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -152,8 +153,17 @@
 #include "wlan_hdd_cfr.h"
 #include <qdf_hang_event_notifier.h>
 #include "hif.h"
+
+#ifdef FEATURE_WLAN_DYNAMIC_NSS
+#include "wlan_hdd_dynamic_nss.h"
+#endif
+
 #include "wlan_hdd_ioctl.h"
 #include "wlan_hdd_gpio.h"
+
+#ifdef FEATURE_WLAN_DYNAMIC_NSS
+#include "wlan_hdd_dynamic_nss.h"
+#endif
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -3993,6 +4003,10 @@ __wlan_hdd_cfg80211_get_features(struct wiphy *wiphy,
 		wlan_hdd_cfg80211_set_feature(feature_flags,
 			QCA_WLAN_VENDOR_FEATURE_OFFCHANNEL_SIMULTANEOUS);
 
+	if (policy_mgr_is_hw_dbs_capable(hdd_ctx->psoc))
+		wlan_hdd_cfg80211_set_feature(feature_flags,
+			QCA_WLAN_VENDOR_FEATURE_CONCURRENT_BAND_SESSIONS);
+
 	if (wma_is_p2p_lo_capable())
 		wlan_hdd_cfg80211_set_feature(feature_flags,
 			QCA_WLAN_VENDOR_FEATURE_P2P_LISTEN_OFFLOAD);
@@ -6798,6 +6812,7 @@ wlan_hdd_wifi_config_policy[QCA_WLAN_VENDOR_ATTR_CONFIG_MAX + 1] = {
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_RSN_IE] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_GTX] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ELNA_BYPASS] = {.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_CONFIG_SET_NSS_ANT] = {.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY] = {.type = NLA_U32 },
 	[QCA_WLAN_VENDOR_ATTR_CONFIG_ACCESS_POLICY_IE_LIST] = {
 		.type = NLA_BINARY,
@@ -8206,6 +8221,23 @@ static int hdd_set_elna_bypass(struct hdd_adapter *adapter,
 #endif
 
 /**
+ * hdd_config_set_nss_and_antenna_mode() - set the number of spatial streams supported by the adapter
+ * and set responding antenna mode.
+ *
+ * @adapter: hdd adapter
+ * @attr: pointer to nla attr
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int hdd_config_set_nss_and_antenna_mode(struct hdd_adapter *adapter,
+                               const struct nlattr *attr)
+{
+        uint8_t nss;
+        nss = nla_get_u8(attr);
+        return wlan_hdd_set_nss_and_antenna_mode(adapter, nss, nss);
+}
+
+/**
  * typedef independent_setter_fn - independent attribute handler
  * @adapter: The adapter being configured
  * @attr: The nl80211 attribute being applied
@@ -8301,6 +8333,9 @@ static const struct independent_setters independent_setters[] = {
 	 hdd_config_power},
 	{QCA_WLAN_VENDOR_ATTR_CONFIG_UDP_QOS_UPGRADE,
 	 hdd_config_udp_qos_upgrade_threshold},
+
+	{QCA_WLAN_VENDOR_ATTR_CONFIG_SET_NSS_ANT,
+	 hdd_config_set_nss_and_antenna_mode},
 };
 
 #ifdef WLAN_FEATURE_ELNA
@@ -17636,10 +17671,19 @@ static int wlan_hdd_add_key_sta(struct hdd_adapter *adapter,
 	vdev = hdd_objmgr_get_vdev(adapter);
 	if (!vdev)
 		return -EINVAL;
+
+#if IS_ENABLED(CONFIG_BOARD_ELISH) || IS_ENABLED(CONFIG_BOARD_ENUMA) || IS_ENABLED(CONFIG_BOARD_DAGU)
+	hdd_start_install_key(adapter);
+#endif
 	errno = wlan_cfg80211_crypto_add_key(vdev, (pairwise ?
 					     WLAN_CRYPTO_KEY_TYPE_UNICAST :
 					     WLAN_CRYPTO_KEY_TYPE_GROUP),
 					     key_index, true);
+#if IS_ENABLED(CONFIG_BOARD_ELISH) || IS_ENABLED(CONFIG_BOARD_ENUMA) || IS_ENABLED(CONFIG_BOARD_DAGU)
+	if (!errno)
+		errno = hdd_wait_for_install_key_complete(adapter);
+#endif
+
 	hdd_objmgr_put_vdev(vdev);
 	if (!errno && adapter->send_mode_change) {
 		wlan_hdd_send_mode_change_event();
@@ -18684,7 +18728,8 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 				    const u8 *ssid, size_t ssid_len,
 				    const u8 *bssid, const u8 *bssid_hint,
 				    uint32_t oper_freq,
-				    enum nl80211_chan_width ch_width)
+				    enum nl80211_chan_width ch_width,
+				    uint32_t ch_freq_hint)
 {
 	int status = 0;
 	QDF_STATUS qdf_status;
@@ -18899,6 +18944,8 @@ static int wlan_hdd_cfg80211_connect_start(struct hdd_adapter *adapter,
 			hdd_select_cbmode(adapter, oper_freq,
 					  &roam_profile->ch_params);
 		}
+
+		roam_profile->freq_hint = ch_freq_hint;
 
 		if (wlan_hdd_cfg80211_check_pmf_valid(roam_profile)) {
 			status = -EINVAL;
@@ -20469,7 +20516,8 @@ static int __wlan_hdd_cfg80211_join_ibss(struct wiphy *wiphy,
 						 params->ssid_len,
 						 bssid.bytes, NULL,
 						 conn_info_channel,
-						 params->chandef.width);
+						 params->chandef.width,
+						 0);
 
 	if (0 > status) {
 		hdd_err("connect failed");
@@ -21146,6 +21194,7 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	struct hdd_context *hdd_ctx;
 	uint8_t vdev_id_list[MAX_NUMBER_OF_CONC_CONNECTIONS], i;
 	bool disable_nan = true;
+	uint32_t ch_freq_hint = 0;
 
 	hdd_enter();
 
@@ -21270,11 +21319,15 @@ static int __wlan_hdd_cfg80211_connect(struct wiphy *wiphy,
 	else
 		ch_freq = 0;
 
+	if (req->channel_hint)
+		ch_freq_hint = req->channel_hint->center_freq;
+
 	wlan_hdd_check_ht20_ht40_ind(hdd_ctx, adapter, req);
 
 	status = wlan_hdd_cfg80211_connect_start(adapter, req->ssid,
 						 req->ssid_len, req->bssid,
-						 bssid_hint, ch_freq, 0);
+						 bssid_hint, ch_freq, 0,
+						 ch_freq_hint);
 	if (status) {
 		wlan_hdd_cfg80211_clear_privacy(adapter);
 		hdd_err("connect failed");
