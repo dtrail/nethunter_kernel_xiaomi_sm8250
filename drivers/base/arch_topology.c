@@ -18,6 +18,11 @@
 #include <linux/sched/sysctl.h>
 #include <linux/cpuset.h>
 
+bool topology_scale_freq_invariant(void)
+{
+	return cpufreq_supports_freq_invariance();
+}
+
 DEFINE_PER_CPU(unsigned long, freq_scale) = SCHED_CAPACITY_SCALE;
 DEFINE_PER_CPU(unsigned long, max_cpu_freq);
 DEFINE_PER_CPU(unsigned long, max_freq_scale) = SCHED_CAPACITY_SCALE;
@@ -27,6 +32,9 @@ void arch_set_freq_scale(const struct cpumask *cpus, unsigned long cur_freq,
 {
 	unsigned long scale;
 	int i;
+
+	if (WARN_ON_ONCE(!cur_freq || !max_freq))
+		return;
 
 	scale = (cur_freq << SCHED_CAPACITY_SHIFT) / max_freq;
 

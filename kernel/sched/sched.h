@@ -768,7 +768,17 @@ struct rt_rq {
 	struct task_group	*tg;
 #endif
 };
-
+#ifdef CONFIG_RT_GROUP_SCHED
+static inline int rt_rq_throttled(struct rt_rq *rt_rq)
+{
+        return rt_rq->rt_throttled && !rt_rq->rt_nr_boosted;
+}
+#else
+static inline int rt_rq_throttled(struct rt_rq *rt_rq)
+{
+        return rt_rq->rt_throttled;
+}
+#endif
 static inline bool rt_rq_is_runnable(struct rt_rq *rt_rq)
 {
 	return rt_rq->rt_queued && rt_rq->rt_nr_running;
@@ -2612,6 +2622,11 @@ extern void set_rq_online (struct rq *rq);
 extern void set_rq_offline(struct rq *rq);
 extern bool sched_smp_initialized;
 
+/*
+ * task_may_not_preempt - check whether a task may not be preemptible soon
+ */
+extern bool task_may_not_preempt(struct task_struct *task, int cpu);
+
 #else /* CONFIG_SMP */
 
 /*
@@ -3014,7 +3029,7 @@ static inline unsigned long cpu_util(int cpu)
 #ifdef CONFIG_HAVE_SCHED_AVG_IRQ
 static inline unsigned long cpu_util_irq(struct rq *rq)
 {
-	return rq->avg_irq.util_avg;
+	return READ_ONCE(rq->avg_irq.util_avg);
 }
 
 static inline
