@@ -147,3 +147,4 @@ arch/arm64/configs/nethunter_defconfig.new
 *.rej
 *.orig
 dtbo_build.sh
+arch/arm64/configs/nethunter_defconfig
