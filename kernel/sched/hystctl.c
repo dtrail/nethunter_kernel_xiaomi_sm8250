@@ -19,30 +19,30 @@ static int __init hystctl_init(void)
 
     switch (hyst_mode) {
     case 0: // Balanced (default)
-        sched_busy_hysteresis_enable_cpus = 0xFF; // all CPUs
-        sched_busy_hyst = 256; // ~25% margin
+        sysctl_sched_busy_hyst_enable_cpus = 0xFF; // all CPUs
+        sysctl_sched_busy_hyst = 256; // ~25% margin
         break;
     case 1: // Performance
-        sched_busy_hysteresis_enable_cpus = 0xF0; // big cores
-        sched_busy_hyst = 64;  // ~6% margin
+        sysctl_sched_busy_hyst_enable_cpus = 0xF0; // big cores
+        sysctl_sched_busy_hyst = 64;  // ~6% margin
         break;
     case 2: // Battery
-        sched_busy_hysteresis_enable_cpus = 0x0F; // little cores
-        sched_busy_hyst = 512; // ~50% margin
+        sysctl_sched_busy_hyst_enable_cpus = 0x0F; // little cores
+        sysctl_sched_busy_hyst = 512; // ~50% margin
         break;
     case 3: // Disabled
-        sched_busy_hysteresis_enable_cpus = 0x00; // none
-        sched_busy_hyst = 0;
+        sysctl_sched_busy_hyst_enable_cpus = 0x00; // none
+        sysctl_sched_busy_hyst = 0;
         break;
     default:
         pr_warn("Unknown hyst_mode=%d, falling back to Balanced\n", hyst_mode);
-        sched_busy_hysteresis_enable_cpus = 0xFF;
-        sched_busy_hyst = 256;
+        sysctl_sched_busy_hyst_enable_cpus = 0xFF;
+        sysctl_sched_busy_hyst = 256;
         break;
     }
 
     pr_info("Applied sched_busy_hyst=%u, enable_cpus=0x%x\n",
-            sched_busy_hyst, sched_busy_hysteresis_enable_cpus);
+            sysctl_sched_busy_hyst, sysctl_sched_busy_hyst_enable_cpus);
     return 0;
 }
 early_initcall(hystctl_init);
