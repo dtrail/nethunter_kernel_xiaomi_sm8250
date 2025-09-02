@@ -19,10 +19,6 @@ ifeq ($(CONFIG_ARCH_LITO), y)
 include $(srctree)/techpack/audio/config/litoauto.conf
 export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/litoauto.conf)
 endif
-ifeq ($(CONFIG_ARCH_BENGAL), y)
-include $(srctree)/techpack/audio/config/bengalauto.conf
-export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/bengalauto.conf)
-endif
 ifeq ($(CONFIG_ARCH_SDM660), y)
 include $(srctree)/techpack/audio/config/sdm660auto.conf
 export $(shell sed 's/=.*//' $(srctree)/techpack/audio/config/sdm660auto.conf)
@@ -66,10 +62,6 @@ endif
 ifeq ($(CONFIG_ARCH_LITO), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio/config/litoautoconf.h
-endif
-ifeq ($(CONFIG_ARCH_BENGAL), y)
-LINUXINCLUDE    += \
-                -include $(srctree)/techpack/audio/config/bengalautoconf.h
 endif
 ifeq ($(CONFIG_ARCH_SDM660), y)
 LINUXINCLUDE    += \
