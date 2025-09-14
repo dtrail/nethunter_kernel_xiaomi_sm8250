@@ -47,16 +47,6 @@
 #include <asm/tlbflush.h>
 #include <asm/machvec.h>
 
-static inline void
-tlb_flush_pmd_range(struct mmu_gather *tlb, unsigned long address,
-		    unsigned long size)
-{
-	if (tlb->start_addr > address)
-		tlb->start_addr = address;
-	if (tlb->end_addr < address + size)
-		tlb->end_addr = address + size;
-}
-
 #include <asm-generic/tlb.h>
 
 #endif /* _ASM_IA64_TLB_H */

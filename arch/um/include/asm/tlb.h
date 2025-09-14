@@ -6,16 +6,4 @@
 #include <asm-generic/cacheflush.h>
 #include <asm-generic/tlb.h>
 
-static inline void
-tlb_flush_pmd_range(struct mmu_gather *tlb, unsigned long address,
-		    unsigned long size)
-{
-	tlb->need_flush = 1;
-
-	if (tlb->start > address)
-		tlb->start = address;
-	if (tlb->end < address + size)
-		tlb->end = address + size;
-}
-
 #endif

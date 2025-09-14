@@ -71,13 +71,5 @@ __pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmdp, unsigned long addr)
 #endif
 }
 
-static inline void
-tlb_flush_pmd_range(struct mmu_gather *tlb, unsigned long address,
-		    unsigned long size)
-{
-	tlb_add_flush(tlb, address);
-	tlb_add_flush(tlb, address + size - PMD_SIZE);
-}
-
 #endif /* CONFIG_MMU */
 #endif

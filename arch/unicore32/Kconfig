@@ -22,7 +22,6 @@ config UNICORE32
 	select NEED_DMA_MAP_STATE
 	select MMU_GATHER_NO_RANGE if MMU
 	select SWIOTLB
-	help
 	  UniCore-32 is 32-bit Instruction Set Architecture,
 	  including a series of low-power-consumption RISC chip
 	  designs licensed by PKUnity Ltd.

@@ -11,17 +11,8 @@
 
 #ifdef CONFIG_MMU
 #include <linux/swap.h>
-#include <asm-generic/tlb.h>
 
-static inline void
-tlb_flush_pmd_range(struct mmu_gather *tlb, unsigned long address,
-		    unsigned long size)
-{
-	if (tlb->start > address)
-		tlb->start = address;
-	if (tlb->end < address + size)
-		tlb->end = address + size;
-}
+#include <asm-generic/tlb.h>
 
 #if defined(CONFIG_CPU_SH4) || defined(CONFIG_SUPERH64)
 extern void tlb_wire_entry(struct vm_area_struct *, unsigned long, pte_t);
