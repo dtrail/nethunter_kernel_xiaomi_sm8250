@@ -24,6 +24,29 @@ Feedback is always appreciated. You can get support on the XDA-Thread here: http
 Happy hunting ;-)
 
 
+
+
+# **Scheduler Hysteresis**
+*Read more: https://pastebin.com/LPTzTDAT
+
+Use Termux, Sysctl GUI or FKM (or whatever you want) to set:
+
+"hyst_mode"
+
+0 - Balanced (Default)
+1 - Performance
+2 - Battery
+3 - Off (Fully disable scheduler hysteresis)
+
+shell:
+/* replace X with number from above */
+```echo X > /proc/sys/kernel/hyst_mode```
+
+Btw, if using FKM: don't touch this parameter: /proc/sys/kernel/sched_busy_hysteresis_enable_cpus !
+FKM misinterpreted it as a binary toggle, so "0" and "1" don't work here and the status given by the app is wrong.
+
+
+
 DOWNLOAD
 STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases
 
