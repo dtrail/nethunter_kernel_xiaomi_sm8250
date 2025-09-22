@@ -1,29 +1,30 @@
 Apollo / Alioth N0tHunter Kernel [4.19][AOSP]
-====================================
+=============================================
 
 - For Kali NetHunter 2025.X
-- Tested on LineageOS 21 - 22.2
+- Tested on Android 13 - 16 AOSP-Roms (specifically tested on LineageOS 21 - 22.2)
 - Based on N0Kernel by EmanuelCN
-- Supports Magisk only
-- Tested on Android 13 - 15 AOSP-Roms
+- Supports Magisk ONLY (*NetHunter doesn't work properly with KSU, APatch or any other root solution, no mtter the version.)
 - Supports all officially supported external devices (USB WI-FI adapters, HID devices, BT devices, CAN, etc.)
 - Additional support for non-standard Realtek USB adapters (88xx, 8188eus, etc.)
 - Full support for CAN-Arsenal, USB-Arsenal, HID-Attacks
-- Configured for better power-efficiency and battery life while retaining good performance
-- MIUI possible: You need Emanuel's modified N0Kernel DTBO Image for MIUI, which you can get on his Telegram channel (N0Kernel releases).
+- MIUI is possible, but UNTESTED: You need Emanuel's modified N0Kernel DTBO Image for MIUI, which you can get on his Telegram channel (N0Kernel releases). 
+----> However, it might induce instability, because I did not build that DTBO together with the kernel. Since I'm not using MIUI, I probably won't support it later. 
+        *Not to mention that MIUI is not a recommended rom for use with NetHunter.
 
-NOTE: I'm probably soon switching sources to LOS-Kernel due to some issues I couldn't fix with N0Kernel source, such as kernel modules support and compatiblity to certain firmwares (not Nethunter related).
 
-While keeping this repository mostly synced to N0Kernel, this kernel goes into a slightly different direction. 
-Apart from being a Kali NetHunter kernel it focuses more on power-efficiency and battery backup while retaining overall good performance.
-The QComm SM8250 is powerful enough to have all these features and play next-gen mobile games, just in case you happen to run this on your daily driver or whatever.
-But in a general use-case we focus primarily on getting more battery life. This comes into handy, for example, when powering an additional external OTG-connected device.
+NOTE: I'm probably switching sources to LOS-Kernel due to some issues I couldn't fix with N0Kernel source, such as kernel modules support and compatiblity to certain other components.
+        Whenever I find the time to do that...
 
 Feedback is always appreciated. You can get support on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051/
 
 Happy hunting ;-)
 
 
+======================
+CONFIGURATIONS SECTION
+======================
+*Here you will find certain extra functions and features, that I've added - or will add in the future - and how to make use of them.
 
 
 # Scheduler Hysteresis
@@ -47,10 +48,17 @@ FKM misinterpreted it as a binary toggle, so "0" and "1" don't work here and the
 
 
 
+========
 DOWNLOAD
+========
+
 STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases
 
 
+
+=======
+CREDITS
+=======
 
 **Credits to:
         EmanuelCN (N0Kernel)
