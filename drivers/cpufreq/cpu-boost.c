@@ -155,8 +155,6 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	case CPUFREQ_ADJUST:
 		if (!ib_min)
 			break;
-	
-		ib_min = min(ib_min, policy->max);
 
 		pr_debug("CPU%u policy min before boost: %u kHz\n",
 			 cpu, policy->min);
@@ -183,16 +181,8 @@ static void update_policy_online(void)
 	/* Re-evaluate policy to trigger adjust notifier for online CPUs */
 	get_online_cpus();
 	for_each_online_cpu(i) {
-		/*
-		 * both clusters have synchronous cpus
-		 * no need to update the policy for each core
-		 * individually, saving at least one [down|up] write
-		 * and a [lock|unlock] irqrestore per pass
-		 */
-		if ((i & 1) == 0) {
-			pr_debug("Updating policy for CPU%d\n", i);
-			cpufreq_update_policy(i);
-		}
+		pr_debug("Updating policy for CPU%d\n", i);
+		cpufreq_update_policy(i);
 	}
 	put_online_cpus();
 }
@@ -224,9 +214,6 @@ static void do_input_boost(struct kthread_work *work)
 {
 	unsigned int i, ret;
 	struct cpu_sync *i_sync_info;
-
-	if (!input_boost_ms)
-	return;
 
 	cancel_delayed_work_sync(&input_boost_rem);
 	if (sched_boost_active) {
