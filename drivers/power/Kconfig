@@ -1,3 +1,9 @@
 source "drivers/power/avs/Kconfig"
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"
+
+config POWERSAFE_TOGGLE
+    bool "Enable powersafe toggle module"
+    default y
+    help
+      Runtime toggles for CPU latency, PRIME frequency and I/O weighting.

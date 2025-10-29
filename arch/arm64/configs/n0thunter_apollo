@@ -552,7 +552,7 @@ CONFIG_ARCH_SUSPEND_POSSIBLE=y
 #
 # CPU Power Management
 #
-
+CONFIG_POWERSAFE_TOGGLE=y
 #
 # CPU Idle
 #
