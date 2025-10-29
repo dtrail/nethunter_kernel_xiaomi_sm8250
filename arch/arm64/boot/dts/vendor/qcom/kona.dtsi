@@ -290,7 +290,9 @@
 				core3 {
 					cpu = <&CPU3>;
 				};
+			};
 
+			cluster1 {
 				core4 {
 					cpu = <&CPU4>;
 				};
@@ -302,7 +304,9 @@
 				core6 {
 					cpu = <&CPU6>;
 				};
+			};
 
+			cluster2 {
 				core7 {
 					cpu = <&CPU7>;
 				};
@@ -346,7 +350,7 @@
 	};
 
 	chosen {
-		bootargs = "quiet noirqdebug nodebugmon rcupdate.rcu_expedited=1 rcu_nocbs=0-7 kpti=off cgroup_disable=pressure";
+		bootargs = "noirqdebug nodebugmon rcupdate.rcu_expedited=1 rcu_nocbs=0-3 kpti=off cgroup_disable=pressure,memory";
 	};
 
 	firmware: firmware {
@@ -3359,7 +3363,7 @@
 
 		/* PM QoS */
 		qcom,pm-qos-cpu-groups = <0x0f 0xf0>;
-		qcom,pm-qos-cpu-group-latency-us = <70 70>;
+		qcom,pm-qos-cpu-group-latency-us = <100 100>;
 		qcom,pm-qos-default-cpu = <0>;
 
 		/*
@@ -5254,33 +5258,25 @@
 
 	qcom,cpufreq-table-0 =
 			< 614400>,
-			< 691200>,
-			< 787200>,
 			< 883200>,
-			< 979200>,
 			<1075200>,
 			<1171200>,
-			<1248000>,
 			<1344000>,
 			<1420800>,
-			<1516800>,
 			<1612800>,
 			<1708800>,
 			<1804800>;
 
 	qcom,cpufreq-table-1 =
 			< 710400>,
-			< 825600>,
 			< 940800>,
 			<1056000>,
 			<1171200>,
-			<1286400>,
 			<1382400>,
 			<1478400>,
 			<1574400>,
 			<1670400>,
 			<1766400>,
-			<1862400>,
 			<1958400>,
 			<2054400>,
 			<2150400>,
@@ -5293,7 +5289,6 @@
 			< 960000>,
 			<1075200>,
 			<1190400>,
-			<1305600>,
 			<1401600>,
 			<1516800>,
 			<1632000>,
@@ -5301,13 +5296,11 @@
 			<1862400>,
 			<1977600>,
 			<2073600>,
-			<2169600>,
 			<2265600>,
 			<2361600>,
 			<2457600>,
 			<2553600>,
 			<2649600>,
 			<2745600>,
-			<2841600>,
-			<3187200>;
+			<2841600>;
 };
