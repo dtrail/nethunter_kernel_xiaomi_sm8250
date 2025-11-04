@@ -279,6 +279,45 @@ void cpufreq_cpu_put(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
 
+int cpufreq_force_governor(struct cpufreq_policy *policy, const char *gov_name)
+{
+    struct cpufreq_policy new_policy;
+    int ret;
+
+    if (!policy || !gov_name)
+        return -EINVAL;
+
+    memcpy(&new_policy, policy, sizeof(*policy));
+
+    ret = cpufreq_parse_governor((char *)gov_name, &new_policy);
+    if (ret)
+        return ret;
+
+    ret = cpufreq_set_policy(policy, &new_policy);
+
+    if (new_policy.governor)
+        module_put(new_policy.governor->owner);
+
+    return ret;
+}
+EXPORT_SYMBOL_GPL(cpufreq_force_governor);
+
+int cpufreq_force_governor_cpu(unsigned int cpu, const char *gov_name)
+{
+    struct cpufreq_policy *policy;
+    int ret;
+
+    policy = cpufreq_cpu_get(cpu);
+    if (!policy)
+        return -ENODEV;
+
+    ret = cpufreq_force_governor(policy, gov_name);
+    cpufreq_cpu_put(policy);
+
+    return ret;
+}
+EXPORT_SYMBOL_GPL(cpufreq_force_governor_cpu);
+
 /*********************************************************************
  *            EXTERNALLY AFFECTING FREQUENCY CHANGES                 *
  *********************************************************************/
