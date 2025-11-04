@@ -50,7 +50,6 @@
  * Co-created by Manuel & Copilot
  */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
@@ -60,19 +59,12 @@
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
-#include <linux/cpufreq.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0)
-#define proc_ops file_operations
-#endif
 
 /* === Topology masks (exported by kernel/cpu.c on many Android/vendor trees) === */
-//extern const struct cpumask *const cpu_little_mask;
-//extern const struct cpumask *const cpu_big_mask;
-static struct cpumask little_mask;
-static struct cpumask big_mask;
+extern const struct cpumask *const cpu_little_mask;
+extern const struct cpumask *const cpu_big_mask;
 extern const struct cpumask *const cpu_prime_mask;
-
 
 /* === Proc paths === */
 #define PROC_DIR        "powersafe"
@@ -113,24 +105,6 @@ static const unsigned int prime_save_khz    = 1804800;
 
 /* === Helpers === */
 
-static void write_sysfs(const char *path, const char *val)
-{
-    struct file *f;
-    loff_t pos = 0;
-    mm_segment_t oldfs;
-
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-
-    f = filp_open(path, O_WRONLY, 0);
-    if (!IS_ERR(f)) {
-        kernel_write(f, val, strlen(val), &pos);
-        filp_close(f, NULL);
-    }
-
-    set_fs(oldfs);
-}
-
 static void set_input_boost_enabled(bool enable)
 {
     struct file *f;
@@ -149,42 +123,6 @@ static void set_input_boost_enabled(bool enable)
     }
 
     set_fs(oldfs);
-}
-
-static void set_input_boost_param_str(const char *name, const char *val)
-{
-    char path[128];
-    snprintf(path, sizeof(path), "/sys/module/cpu_input_boost/parameters/%s", name);
-    write_sysfs(path, val);
-}
-
-static void set_input_boost_param_int(const char *name, int val)
-{
-    char buf[32];
-    snprintf(buf, sizeof(buf), "%d", val);
-    set_input_boost_param_str(name, buf);
-}
-
-/* Convenience setters */
-static void configure_input_boost(int input_ms, int wake_ms,
-                                  int little_boost, int big_boost, int prime_boost,
-                                  int little_cap, int big_cap, int prime_cap,
-                                  int little_min, int big_min, int prime_min)
-{
-    set_input_boost_param_int("input_boost_ms", input_ms);
-    set_input_boost_param_int("wake_boost_ms",  wake_ms);
-
-    set_input_boost_param_int("l_cluster_boost_freq",      little_boost);
-    set_input_boost_param_int("b_cluster_boost_freq",      big_boost);
-    set_input_boost_param_int("p_cluster_boost_freq",      prime_boost);
-
-    set_input_boost_param_int("l_cluster_max_boost_freq",  little_cap);
-    set_input_boost_param_int("b_cluster_max_boost_freq",  big_cap);
-    set_input_boost_param_int("p_cluster_max_boost_freq",  prime_cap);
-
-    set_input_boost_param_int("little_default_min_freq",   little_min);
-    set_input_boost_param_int("big_default_min_freq",      big_min);
-    set_input_boost_param_int("prime_default_min_freq",    prime_min);
 }
 
 /* Clamp and set target frequency for a specific CPU under userspace governor */
@@ -245,10 +183,8 @@ static ssize_t name##_read(struct file *file, char __user *buf, \
     *ppos = len; \
     return len; \
 } \
-static const struct file_operations name##_fops = { \
-    .owner = THIS_MODULE, \
-    .read  = name##_read, \
-    .llseek = noop_llseek, \
+static const struct proc_ops name##_fops = { \
+    .proc_read = name##_read, \
 };
 
 PROC_ENTRY_RO(latency_state, latency_state)
@@ -299,22 +235,11 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         prime_state = 0;
 
         /* Restore default governor (schedutil) for all clusters */
-        switch_cluster_governor(&little_mask, "schedutil");
-        switch_cluster_governor(&big_mask,    "schedutil");
+        switch_cluster_governor(cpu_little_mask, "schedutil");
+        switch_cluster_governor(cpu_big_mask,    "schedutil");
         switch_cluster_governor(cpu_prime_mask,  "performance");
         set_input_boost_enabled(false);
-    	/* Optional: still set baseline mins if your driver honors them even when boost disabled */
 
-   	configure_input_boost(
-
-        	0, 0,
-
-        	0, 0, 0,
-
-        	0, 0, 0,
-
-        	600000, 825600, 844800
-        );
         pr_info("powersafe: state=0 (default)\n");
         break;
 
@@ -323,19 +248,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 250;                    /* example balanced weight */
         prime_state = 0;                          /* no extra boost */
-        set_input_boost_enabled(true);
-
-    	configure_input_boost(
-
-       		58, 0,
-
-        	1708800, 1056000, 1401600,
-
-	        1804800, 2246400, 2553600,
-
-	        1171200, 825600, 844800
-
-    );
+        set_input_boost_enabled(false);
 
         /* Governor unchanged */
         pr_info("powersafe: state=1 (balanced)\n");
@@ -348,27 +261,14 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         prime_state = 1;
         set_input_boost_enabled(true);
 
-    	configure_input_boost(
-
-        	100, 1000,
-
-	        1708800, 2016000, 2841600,
-
-        	1804800, 2246400, 3120000, /* let prime hit 3.12 during boost */
-
-        	1171200, 1324800, 1804800
-
-    );
-
-
         /* Switch to userspace governor for all clusters (handles empty masks gracefully) */
-        switch_cluster_governor(&little_mask, "userspace");
-        switch_cluster_governor(&big_mask,    "userspace");
+        switch_cluster_governor(cpu_little_mask, "userspace");
+        switch_cluster_governor(cpu_big_mask,    "userspace");
         switch_cluster_governor(cpu_prime_mask,  "userspace");
 
         /* Apply performance policy frequencies */
-        set_cluster_freq(&little_mask, little_perf_khz);
-        set_cluster_freq(&big_mask,    big_perf_khz);
+        set_cluster_freq(cpu_little_mask, little_perf_khz);
+        set_cluster_freq(cpu_big_mask,    big_perf_khz);
         set_cluster_freq(cpu_prime_mask,  prime_perf_khz);
 
         /* Prime boost (if policy allows) */
@@ -384,27 +284,14 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         prime_state = 0;
 
         /* Switch to userspace governor */
-        switch_cluster_governor(&little_mask, "userspace");
-        switch_cluster_governor(&big_mask,    "userspace");
+        switch_cluster_governor(cpu_little_mask, "userspace");
+        switch_cluster_governor(cpu_big_mask,    "userspace");
         switch_cluster_governor(cpu_prime_mask,  "userspace");
         set_input_boost_enabled(false);
 
-   	 /* Optional: still set baseline mins if your driver honors them even when boost disabled */
-
-   	configure_input_boost(
-
-        	0, 0,
-
-        	0, 0, 0,
-
-        	0, 0, 0,
-
-        	600000, 825600, 844800
-        );
-
         /* Conservative frequencies */
-        set_cluster_freq(&little_mask, little_save_khz);
-        set_cluster_freq(&big_mask,    big_save_khz);
+        set_cluster_freq(cpu_little_mask, little_save_khz);
+        set_cluster_freq(cpu_big_mask,    big_save_khz);
         set_cluster_freq(cpu_prime_mask,  prime_save_khz);
 
         pr_info("powersafe: state=3 (powersafe)\n");
@@ -418,11 +305,9 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
     return count;
 }
 
-static const struct file_operations master_toggle_fops = {
-    .owner = THIS_MODULE,
-    .read  = master_toggle_read,
-    .write = master_toggle_write,
-    .llseek = noop_llseek,
+static const struct proc_ops master_toggle_fops = {
+    .proc_read  = master_toggle_read,
+    .proc_write = master_toggle_write,
 };
 
 // Input boost read
@@ -444,10 +329,8 @@ static ssize_t input_boost_state_read(struct file *file, char __user *buf,
     return len;
 }
 
-static const struct file_operations input_boost_state_fops = {
-    .owner  = THIS_MODULE,
-    .read   = input_boost_state_read,
-    .llseek = noop_llseek,
+static const struct proc_ops input_boost_state_fops = {
+    .proc_read = input_boost_state_read,
 };
 
 // Input boost r/w
@@ -479,42 +362,14 @@ static ssize_t input_boost_write(struct file *file, const char __user *ubuf,
     return -EINVAL;
 }
 
-static const struct file_operations input_boost_fops = {
-
-    .owner = THIS_MODULE,
-
-    .write = input_boost_write,
-
-    .llseek = noop_llseek,
-
+static const struct proc_ops input_boost_fops = {
+    .proc_write = input_boost_write,
 };
-
 
 /* === Module init/exit === */
 
 static int __init powersafe_init(void)
 {
-    /* Build little cluster mask (CPUs 0–3) */
-    cpumask_clear(&little_mask);
-    cpumask_set_cpu(0, &little_mask);
-    cpumask_set_cpu(1, &little_mask);
-    cpumask_set_cpu(2, &little_mask);
-    cpumask_set_cpu(3, &little_mask);
-
-    /* Build big cluster mask (CPUs 4–6) */
-    cpumask_clear(&big_mask);
-    cpumask_set_cpu(4, &big_mask);
-    cpumask_set_cpu(5, &big_mask);
-    cpumask_set_cpu(6, &big_mask);
-
-    /* Now you can keep using &little_mask and &big_mask
-       in your switch_cluster_governor() and set_cluster_freq() calls,
-       alongside cpu_prime_mask which is already exported. */
-
-    /* … rest of your init code … */
-
-    return 0;
-
     /* Create proc directory */
     proc_dir = proc_mkdir(PROC_DIR, NULL);
     if (!proc_dir)
@@ -588,5 +443,4 @@ module_exit(powersafe_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("dtrail + Copilot");
-MODULE_DESCRIPTION("Topology-aware power management with 4-state master toggle and prime boost");
-
+MODULE_DESCRIPTION("Topology-aware power management with 4-state master toggle and prime boost");
