@@ -101,6 +101,22 @@ static void configure_input_boost(int input_ms, int wake_ms,
     set_input_boost_param_int("prime_default_min_freq",    prime_min);
 }
 
+/* Helper to swwitch govenror */
+static int set_prime_governor(const char *gov_name)
+{
+    struct cpufreq_policy *policy;
+    int ret = 0;
+
+    policy = cpufreq_cpu_get(7); // prime cluster leader
+    if (!policy)
+        return -ENODEV;
+
+    ret = cpufreq_set_policy(policy, gov_name);
+    cpufreq_cpu_put(policy);
+
+    return ret;
+}
+
 /* ---------- Latency toggle ---------- */
 static ssize_t latency_toggle_write(struct file *file, const char __user *buf,
                                     size_t count, loff_t *ppos)
@@ -228,6 +244,30 @@ static ssize_t input_boost_state_read(struct file *file, char __user *buf,
     return len;
 }
 
+/* BORE parameters tweaking */
+
+/* ---------- BORE parameters tweaking ---------- */
+static void configure_bore(int inherit, int smooth, int offset, int scale, int lifetime)
+{
+    char buf[32];
+
+    snprintf(buf, sizeof(buf), "%d", inherit);
+    write_sysfs("/proc/sys/kernel/sched_burst_inherit_type", buf);
+
+    snprintf(buf, sizeof(buf), "%d", smooth);
+    write_sysfs("/proc/sys/kernel/sched_burst_smoothness", buf);
+
+    snprintf(buf, sizeof(buf), "%d", offset);
+    write_sysfs("/proc/sys/kernel/sched_burst_penalty_offset", buf);
+
+    snprintf(buf, sizeof(buf), "%d", scale);
+    write_sysfs("/proc/sys/kernel/sched_burst_penalty_scale", buf);
+
+    snprintf(buf, sizeof(buf), "%d", lifetime);
+    write_sysfs("/proc/sys/kernel/sched_burst_cache_lifetime", buf);
+}
+
+
 static const struct file_operations input_boost_state_fops = {
     .owner  = THIS_MODULE,
     .read   = input_boost_state_read,
@@ -292,6 +332,8 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 0;
         io_weight_state = 0;
         prime_state = 0;
+        configure_bore(2, 1, 24, 1536, 75000000);
+        set_prime_governor("schedutil");
 
         /* Restore prime max to default */
         policy = cpufreq_cpu_get(7);
@@ -319,7 +361,9 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 250;
         prime_state = 0;
-
+        configure_bore(2, 2, 20, 1400, 80000000);
+	set_prime_governor("schedutil");
+	
         /* Prime left at default */
         policy = cpufreq_cpu_get(7);
         if (policy) {
@@ -346,7 +390,8 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 500;
         prime_state = 1;
-
+        configure_bore(2, 3, 12, 1024, 100000000);
+	set_prime_governor("performance");
         /* Prime boosted to 3.12 GHz */
         policy = cpufreq_cpu_get(7);
         if (policy) {
@@ -373,6 +418,8 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 100;
         prime_state = 0;
+        configure_bore(1, 0, 32, 1800, 40000000);
+        set_prime_governor("powersave");
 
         /* Prime back to default */
         policy = cpufreq_cpu_get(7);
@@ -459,4 +506,5 @@ module_init(powersafe_init);
 module_exit(powersafe_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("dtrail & Copilot");
-MODULE_DESCRIPTION("Powersafe Toggle Module with Master Switch, Input Boost, and Read Handlers");
+MODULE_DESCRIPTION("Powersafe Toggle Module with Master Switch, Input Boost, and Read Handlers");
+
