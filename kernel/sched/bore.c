@@ -22,6 +22,14 @@ static int __maybe_unused maxval_8_bits  =  255;
 static int __maybe_unused maxval_12_bits = 4095;
 static int __maybe_unused maxval_3       =    3;
 
+/* Provide local constants for sysctl min/max enforcement */
+static int sysctl_vals[] = { 0, 1, 2, 3, 4, 5 };
+
+#define SYSCTL_ZERO ((void *)&sysctl_vals[0])
+#define SYSCTL_ONE  ((void *)&sysctl_vals[1])
+#define SYSCTL_TWO  ((void *)&sysctl_vals[2])
+#define SYSCTL_THREE ((void *)&sysctl_vals[3])
+
 #define MAX_BURST_PENALTY ((40U << 8) - 1)
 #define BURST_CACHE_STOP_COUNT 63
 
