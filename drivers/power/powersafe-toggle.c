@@ -102,17 +102,47 @@ static void configure_input_boost(int input_ms, int wake_ms,
 }
 
 /* Helper to swwitch govenror */
-static int set_prime_governor(const char *gov_name)
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+
+/* Write a string into a sysfs file from kernel space */
+static int write_sysfs_file(const char *path, const char *value)
 {
-    struct cpufreq_policy *policy;
-    int ret = 0;
+    struct file *f;
+    mm_segment_t oldfs;
+    ssize_t ret;
+    size_t len = strlen(value);
 
-    policy = cpufreq_cpu_get(7); // prime cluster leader
-    if (!policy)
-        return -ENODEV;
+    f = filp_open(path, O_WRONLY, 0);
+    if (IS_ERR(f))
+        return PTR_ERR(f);
 
-    ret = cpufreq_set_policy(policy, gov_name);
-    cpufreq_cpu_put(policy);
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+
+    ret = kernel_write(f, value, len, &f->f_pos);
+
+    set_fs(oldfs);
+    filp_close(f, NULL);
+
+    return (ret < 0) ? (int)ret : 0;
+}
+
+/* Convenience wrapper to set governor for a given CPU */
+static int set_cpu_governor(unsigned int cpu, const char *gov)
+{
+    char *path;
+    int ret;
+
+    path = kasprintf(GFP_KERNEL,
+                     "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_governor",
+                     cpu);
+    if (!path)
+        return -ENOMEM;
+
+    ret = write_sysfs_file(path, gov);
+    kfree(path);
 
     return ret;
 }
@@ -333,7 +363,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 0;
         prime_state = 0;
         configure_bore(2, 1, 24, 1536, 75000000);
-        set_prime_governor("schedutil");
+        set_cpu_governor(0, "schedutil\n");
 
         /* Restore prime max to default */
         policy = cpufreq_cpu_get(7);
@@ -362,7 +392,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 250;
         prime_state = 0;
         configure_bore(2, 2, 20, 1400, 80000000);
-	set_prime_governor("schedutil");
+	set_cpu_governor(0, "schedutil\n");
 	
         /* Prime left at default */
         policy = cpufreq_cpu_get(7);
@@ -391,7 +421,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 500;
         prime_state = 1;
         configure_bore(2, 3, 12, 1024, 100000000);
-	set_prime_governor("performance");
+	set_cpu_governor(0, "performance\n");
         /* Prime boosted to 3.12 GHz */
         policy = cpufreq_cpu_get(7);
         if (policy) {
@@ -419,7 +449,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 100;
         prime_state = 0;
         configure_bore(1, 0, 32, 1800, 40000000);
-        set_prime_governor("powersave");
+        set_cpu_governor(0, "powersave\n");
 
         /* Prime back to default */
         policy = cpufreq_cpu_get(7);
