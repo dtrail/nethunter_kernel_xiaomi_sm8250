@@ -158,9 +158,7 @@ static struct usb_device_id rtw_usb_id_tbl[] = {
 	{USB_DEVICE(0x2001, 0x330F), .driver_info = RTL8188E}, /* DLink DWA-125 REV D1 */ 
 	{USB_DEVICE(0x2001, 0x3310), .driver_info = RTL8188E}, /* Dlink DWA-123 REV D1 */ 
 	{USB_DEVICE(0x2001, 0x3311), .driver_info = RTL8188E}, /* DLink GO-USB-N150 REV B1 */ 
-	{USB_DEVICE(0x2001, 0x331B), .driver_info = RTL8188E}, /* DLink DWA-121 REV B1 */ 
-	{USB_DEVICE(0x056E, 0x4008), .driver_info = RTL8188E}, /* Elecom WDC-150SU2M */ 
-	{USB_DEVICE(0x7392, 0xB811), .driver_info = RTL8188E}, /* Edimax EW-7811UN v2 */
+	{USB_DEVICE(0x056E, 0x4008), .driver_info = RTL8188E}, /* Elecom WDC-150SU2M */ 	
 #endif
 
 #ifdef CONFIG_RTL8812A
@@ -306,7 +304,7 @@ struct rtw_usb_drv usb_drv = {
 	.usbdrv.supports_autosuspend = 1,
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19))
 	.usbdrv.drvwrap.driver.shutdown = rtw_dev_shutdown,
 #else
 	.usbdrv.driver.shutdown = rtw_dev_shutdown,

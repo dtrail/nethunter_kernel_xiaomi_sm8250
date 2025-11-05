@@ -1199,11 +1199,7 @@ static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 	}
 
 	_rtw_memcpy(adapter_mac_addr(padapter), sa->sa_data, ETH_ALEN); /* set mac addr to adapter */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
-	eth_hw_addr_set(pnetdev, sa->sa_data);
-#else
 	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
-#endif
 
 #if 0
 	if (rtw_is_hw_init_completed(padapter)) {
@@ -1300,6 +1296,7 @@ static u16 rtw_select_queue(struct net_device *dev, struct sk_buff *skb
   #endif
 #endif
 )
+
 {
 	_adapter	*padapter = rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
@@ -1517,12 +1514,6 @@ struct net_device *rtw_init_netdev(_adapter *old_padapter)
 	if (!pnetdev)
 		return NULL;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
-	pnetdev->min_mtu = WLAN_MIN_ETHFRM_LEN;
-	pnetdev->mtu = WLAN_DATA_MAXLEN;
-	pnetdev->max_mtu = WLAN_DATA_MAXLEN;
-#endif
-
 	padapter = rtw_netdev_priv(pnetdev);
 	padapter->pnetdev = pnetdev;
 
@@ -1618,11 +1609,7 @@ int rtw_os_ndev_register(_adapter *adapter, const char *name)
 	u8 rtnl_lock_needed = rtw_rtnl_lock_needed(dvobj);
 
 #ifdef CONFIG_RTW_NAPI
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
-        netif_napi_add_weight(ndev, &adapter->napi, rtw_recv_napi_poll, RTL_NAPI_WEIGHT);
-#else
-        netif_napi_add(ndev, &adapter->napi, rtw_recv_napi_poll, RTL_NAPI_WEIGHT);
-#endif
+	netif_napi_add(ndev, &adapter->napi, rtw_recv_napi_poll, RTL_NAPI_WEIGHT);
 #endif /* CONFIG_RTW_NAPI */
 
 #if defined(CONFIG_IOCTL_CFG80211)
@@ -1636,11 +1623,7 @@ int rtw_os_ndev_register(_adapter *adapter, const char *name)
 	/* alloc netdev name */
 	rtw_init_netdev_name(ndev, name);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
-	eth_hw_addr_set(ndev, adapter_mac_addr(adapter));
-#else
 	_rtw_memcpy(ndev->dev_addr, adapter_mac_addr(adapter), ETH_ALEN);
-#endif
 #if defined(CONFIG_NET_NS)
     dev_net_set(ndev, wiphy_net(adapter_to_wiphy(adapter)));
 #endif //defined(CONFIG_NET_NS)

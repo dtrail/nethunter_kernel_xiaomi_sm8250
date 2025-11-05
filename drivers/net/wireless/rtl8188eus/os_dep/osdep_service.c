@@ -1268,11 +1268,7 @@ u32 _rtw_down_sema(_sema *sema)
 inline void thread_exit(_completion *comp)
 {
 #ifdef PLATFORM_LINUX
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
-	kthread_complete_and_exit(comp, 0);
-#else
 	complete_and_exit(comp, 0);
-#endif
 #endif
 
 #ifdef PLATFORM_FREEBSD
@@ -2143,19 +2139,15 @@ static int isFileReadable(const char *path, u32 *sz)
 {
 	struct file *fp;
 	int ret = 0;
-	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 	mm_segment_t oldfs;
-	#endif
 	char buf;
 
 	fp = filp_open(path, O_RDONLY, 0);
 	if (IS_ERR(fp))
 		ret = PTR_ERR(fp);
 	else {
-		#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 		oldfs = get_fs();
 		set_fs(KERNEL_DS);
-		#endif
 
 		if (1 != readFile(fp, &buf, 1))
 			ret = PTR_ERR(fp);
@@ -2167,9 +2159,8 @@ static int isFileReadable(const char *path, u32 *sz)
 			*sz = i_size_read(fp->f_dentry->d_inode);
 			#endif
 		}
-		#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+
 		set_fs(oldfs);
-		#endif
 		filp_close(fp, NULL);
 	}
 	return ret;
@@ -2185,9 +2176,7 @@ static int isFileReadable(const char *path, u32 *sz)
 static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 {
 	int ret = -1;
-	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 	mm_segment_t oldfs;
-	#endif
 	struct file *fp;
 
 	if (path && buf) {
@@ -2195,14 +2184,10 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 		if (0 == ret) {
 			RTW_INFO("%s openFile path:%s fp=%p\n", __FUNCTION__, path , fp);
 
-			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 			oldfs = get_fs();
 			set_fs(KERNEL_DS);
-			#endif
 			ret = readFile(fp, buf, sz);
-			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 			set_fs(oldfs);
-			#endif
 			closeFile(fp);
 
 			RTW_INFO("%s readFile, ret:%d\n", __FUNCTION__, ret);
@@ -2226,9 +2211,7 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
 static int storeToFile(const char *path, u8 *buf, u32 sz)
 {
 	int ret = 0;
-	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 	mm_segment_t oldfs;
-	#endif
 	struct file *fp;
 
 	if (path && buf) {
@@ -2236,14 +2219,10 @@ static int storeToFile(const char *path, u8 *buf, u32 sz)
 		if (0 == ret) {
 			RTW_INFO("%s openFile path:%s fp=%p\n", __FUNCTION__, path , fp);
 
-			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 			oldfs = get_fs();
 			set_fs(KERNEL_DS);
-			#endif
 			ret = writeFile(fp, buf, sz);
-			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
 			set_fs(oldfs);
-			#endif
 			closeFile(fp);
 
 			RTW_INFO("%s writeFile, ret:%d\n", __FUNCTION__, ret);
@@ -2345,12 +2324,6 @@ struct net_device *rtw_alloc_etherdev_with_old_priv(int sizeof_priv, void *old_p
 	if (!pnetdev)
 		goto RETURN;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
-	pnetdev->min_mtu = WLAN_MIN_ETHFRM_LEN;
-	pnetdev->mtu = WLAN_MAX_ETHFRM_LEN;
-	pnetdev->max_mtu = WLAN_DATA_MAXLEN;
-#endif
-
 	pnpi = netdev_priv(pnetdev);
 	pnpi->priv = old_priv;
 	pnpi->sizeof_priv = sizeof_priv;
@@ -2371,12 +2344,6 @@ struct net_device *rtw_alloc_etherdev(int sizeof_priv)
 #endif
 	if (!pnetdev)
 		goto RETURN;
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
-	pnetdev->min_mtu = WLAN_MIN_ETHFRM_LEN;
-	pnetdev->mtu = WLAN_MAX_ETHFRM_LEN;
-	pnetdev->max_mtu = WLAN_DATA_MAXLEN;
-#endif
 
 	pnpi = netdev_priv(pnetdev);
 
@@ -2451,7 +2418,7 @@ int rtw_change_ifname(_adapter *padapter, const char *ifname)
 
 	rtw_init_netdev_name(pnetdev, ifname);
 
-	_rtw_memcpy((void *)pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
+	_rtw_memcpy(pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
 
 	if (rtnl_lock_needed)
 		ret = register_netdev(pnetdev);
@@ -2574,9 +2541,7 @@ u64 rtw_division64(u64 x, u64 y)
 inline u32 rtw_random32(void)
 {
 #ifdef PLATFORM_LINUX
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
-        return get_random_u32();
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	return prandom_u32();
 #elif (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 18))
 	u32 random_int;

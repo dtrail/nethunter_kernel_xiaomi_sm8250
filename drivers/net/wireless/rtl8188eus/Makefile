@@ -1,5 +1,6 @@
-EXTRA_CFLAGS += $(CFLAGS)
 EXTRA_CFLAGS += $(USER_EXTRA_CFLAGS) -fno-pie
+EXTRA_CFLAGS += -O1
+#EXTRA_CFLAGS += -O3
 EXTRA_CFLAGS += -Wno-unused-variable
 EXTRA_CFLAGS += -Wno-unused-value
 EXTRA_CFLAGS += -Wno-unused-label
@@ -8,9 +9,6 @@ EXTRA_CFLAGS += -Wno-unused-function
 EXTRA_CFLAGS += -Wno-unused
 EXTRA_CFLAGS += -Wno-vla
 EXTRA_CFLAGS += -Wno-date-time
-EXTRA_CFLAGS += -Wno-missing-prototypes
-EXTRA_CFLAGS += -Wno-missing-declarations
-
 
 GCC_VER_49 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 4.9 | bc )
 ifeq ($(GCC_VER_49),1)
@@ -156,10 +154,11 @@ CONFIG_PLATFORM_AML_S905 = n
 CONFIG_PLATFORM_ZTE_ZX296716 = n
 CONFIG_PLATFORM_ARM_ODROIDC2 = n
 CONFIG_PLATFORM_PPC = n
-CONFIG_PLATFORM_PPC64LE = n
 ###############################################################
 
 CONFIG_DRVEXT_MODULE = n
+
+export TopDIR ?= $(shell pwd)
 
 ########### COMMON  #################################
 ifeq ($(CONFIG_GSPI_HCI), y)
@@ -775,16 +774,16 @@ endif
 ifeq ($(CONFIG_AUTOCFG_CP), y)
 
 ifeq ($(CONFIG_MULTIDRV), y)
-$(shell cp autoconf_multidrv_$(HCI_NAME)_linux.h include/autoconf.h)
+$(shell cp $(TopDIR)/autoconf_multidrv_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
 else
 ifeq ($(CONFIG_RTL8188E)$(CONFIG_SDIO_HCI),yy)
-$(shell cp autoconf_rtl8189e_$(HCI_NAME)_linux.h include/autoconf.h)
+$(shell cp $(TopDIR)/autoconf_rtl8189e_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
 else ifeq ($(CONFIG_RTL8188F)$(CONFIG_SDIO_HCI),yy)
-$(shell cp autoconf_rtl8189f_$(HCI_NAME)_linux.h include/autoconf.h)
+$(shell cp $(TopDIR)/autoconf_rtl8189f_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
 else ifeq ($(CONFIG_RTL8723C),y)
-$(shell cp autoconf_rtl8723c_$(HCI_NAME)_linux.h include/autoconf.h)
+$(shell cp $(TopDIR)/autoconf_rtl8723c_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
 else
-$(shell cp autoconf_$(RTL871X)_$(HCI_NAME)_linux.h include/autoconf.h)
+$(shell cp $(TopDIR)/autoconf_$(RTL871X)_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
 endif
 endif
 
@@ -1032,14 +1031,14 @@ EXTRA_CFLAGS += -DDM_ODM_SUPPORT_TYPE=0x04
 ifeq ($(CONFIG_PLATFORM_I386_PC), y)
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
 EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
-SUBARCH := $(shell uname -m | sed -e "s/i.86/i386/; s/ppc64le/powerpc/; s/ppc/powerpc/; s/armv.l/arm/; s/aarch64/arm64/;")
+SUBARCH := $(shell uname -m | sed -e "s/i.86/i386/; s/ppc/powerpc/; s/armv.l/arm/; s/aarch64/arm64/;")
 ARCH ?= $(SUBARCH)
-CROSS_COMPILE ?=
+CROSS_COMPILE ?= $(CROSS_COMPILE)
 KVER  := $(shell uname -r)
-KSRC := /lib/modules/$(KVER)/build
-MODDESTDIR := /lib/modules/$(KVER)/kernel/drivers/net/wireless/
+KSRC := $(KLIB_BUILD)
+MODDESTDIR := /lib/modules/$(KVER)/build/drivers/net/wireless/
 INSTALL_PREFIX :=
-STAGINGMODDIR := /lib/modules/$(KVER)/kernel/drivers/staging
+STAGINGMODDIR := /lib/modules/$(KVER)/build/drivers/staging
 endif
 
 ifeq ($(CONFIG_PLATFORM_ARM_RPI), y)
@@ -1078,17 +1077,6 @@ endif
 ifeq ($(CONFIG_PLATFORM_PPC), y)
 EXTRA_CFLAGS += -DCONFIG_BIG_ENDIAN
 SUBARCH := $(shell uname -m | sed -e s/ppc/powerpc/)
-ARCH ?= $(SUBARCH)
-CROSS_COMPILE ?=
-KVER ?= $(shell uname -r)
-KSRC := /lib/modules/$(KVER)/build
-MODDESTDIR := /lib/modules/$(KVER)/kernel/drivers/net/wireless/
-INSTALL_PREFIX :=
-endif
-
-ifeq ($(CONFIG_PLATFORM_PPC64LE), y)
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
-SUBARCH := $(shell uname -m | sed -e s/ppc64le/powerpc/)
 ARCH ?= $(SUBARCH)
 CROSS_COMPILE ?=
 KVER ?= $(shell uname -r)
@@ -2049,27 +2037,6 @@ endif
 
 obj-$(CONFIG_RTL8188EU) := $(MODULE_NAME).o
 
-# Support for kernel 6.15+ configuration
-KVER = $(shell uname -r)
-KMAJ = $(shell echo $(KVER) | \
-sed -e 's/^\([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*.*/\1/')
-KMIN = $(shell echo $(KVER) | \
-sed -e 's/^[0-9][0-9]*\.\([0-9][0-9]*\)\.[0-9][0-9]*.*/\1/')
-KREV = $(shell echo $(KVER) | \
-sed -e 's/^[0-9][0-9]*\.[0-9][0-9]*\.\([0-9][0-9]*\).*/\1/')
-GET_KERNEL_VERSION = $(shell \
-echo test | awk '{if($(KMAJ) < $(1)) {print 0} else { \
-if($(KMAJ) > $(1)) {print 1} else { \
-if($(KMIN) < $(2)) {print 0} else { \
-if($(KMIN) > $(2)) {print 1} else { \
-if($(KREV) < $(3)) {print 0} else { print 1 } \
-}}}}}' \
-)
-
-ifeq ($(call GET_KERNEL_VERSION,6,15,0),1)
-ccflags-y = $(EXTRA_CFLAGS)
-endif
-
 else
 
 export CONFIG_RTL8188EU = m
@@ -2132,19 +2099,17 @@ config_r:
 .PHONY: modules clean
 
 clean:
-	@#$(MAKE) -C $(KSRC) M=$(shell pwd) clean
-	@cd hal && rm -frv */*/*/*.mod.c */*/*/*.mod */*/*/*.o */*/*/.*.cmd */*/*/*.ko 2>/dev/null || true
-	@cd hal && rm -frv */*/*.mod.c */*/*.mod */*/*.o */*/.*.cmd */*/*.ko 2>/dev/null || true
-	@cd hal && rm -frv */*.mod.c */*.mod */*.o */.*.cmd */*.ko 2>/dev/null || true
-	@cd hal && rm -frv *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
-	@cd core && rm -fr */*.mod.c */*.mod */*.o */.*.cmd */*.ko 2>/dev/null || true
-	@cd core && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
-	@cd os_dep/linux && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
-	@cd os_dep && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
-	@cd platform && rm -fr *.mod.c *.mod *.o .*.cmd *.ko 2>/dev/null || true
-	@rm -frv Module.symvers 2>/dev/null || true
-	@rm -frv Module.markers 2>/dev/null || true
-	@rm -frv modules.order 2>/dev/null || true
-	@rm -frv *.mod.c *.mod *.o .*.cmd *.ko *~ 2>/dev/null || true
-	@rm -frv .tmp_versions 2>/dev/null || true
+	#$(MAKE) -C $(KSRC) M=$(shell pwd) clean
+	cd hal ; rm -fr */*/*/*.mod.c */*/*/*.mod */*/*/*.o */*/*/.*.cmd */*/*/*.ko
+	cd hal ; rm -fr */*/*.mod.c */*/*.mod */*/*.o */*/.*.cmd */*/*.ko
+	cd hal ; rm -fr */*.mod.c */*.mod */*.o */.*.cmd */*.ko
+	cd hal ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+	cd core ; rm -fr */*.mod.c */*.mod */*.o */.*.cmd */*.ko
+	cd core ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+	cd os_dep/linux ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+	cd os_dep ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+	cd platform ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+	rm -fr Module.symvers ; rm -fr Module.markers ; rm -fr modules.order
+	rm -fr *.mod.c *.mod *.o .*.cmd *.ko *~
+	rm -fr .tmp_versions
 endif

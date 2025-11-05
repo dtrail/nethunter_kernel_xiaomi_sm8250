@@ -167,10 +167,6 @@ struct rtw_wdev_priv {
 	bool block;
 	bool block_scan;
 	bool power_mgmt;
-    
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)
-	u32 mgmt_mask;
-	#endif
 
 	/* report mgmt_frame registered */
 	u16 report_mgmt;
@@ -362,8 +358,8 @@ void rtw_cfg80211_deinit_rfkill(struct wiphy *wiphy);
 
 #define rtw_cfg80211_connect_result(wdev, bssid, req_ie, req_ie_len, resp_ie, resp_ie_len, status, gfp) cfg80211_connect_result(wdev_to_ndev(wdev), bssid, req_ie, req_ie_len, resp_ie, resp_ie_len, status, gfp)
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0) && !defined(RHEL79))
-#define rtw_cfg80211_disconnected(wdev, reason, ie, ie_len, locally_generated, gfp) cfg80211_disconnected(wdev_to_ndev(wdev), reason, ie, ie_len, ie_len, gfp)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0))
+#define rtw_cfg80211_disconnected(wdev, reason, ie, ie_len, locally_generated, gfp) cfg80211_disconnected(wdev_to_ndev(wdev), reason, ie, ie_len, gfp)
 #else
 #define rtw_cfg80211_disconnected(wdev, reason, ie, ie_len, locally_generated, gfp) cfg80211_disconnected(wdev_to_ndev(wdev), reason, ie, ie_len, locally_generated, gfp)
 #endif
@@ -384,7 +380,7 @@ void rtw_cfg80211_deinit_rfkill(struct wiphy *wiphy);
 u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset, u8 ht);
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0) && !defined(RHEL79) )
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0))
 #define NL80211_BAND_2GHZ IEEE80211_BAND_2GHZ
 #define NL80211_BAND_5GHZ IEEE80211_BAND_5GHZ
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
