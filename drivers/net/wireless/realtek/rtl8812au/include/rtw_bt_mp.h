@@ -19,7 +19,7 @@
 
 #if (MP_DRIVER == 1)
 
-#pragma pack(1)
+#pragma pack(push, 1)
 
 /* definition for BT_UP_OP_BT_READY */
 #define	MP_BT_NOT_READY						0
@@ -281,6 +281,7 @@ typedef enum _BT_CTRL_OPCODE_LOWER {
 } BT_CTRL_OPCODE_LOWER, *PBT_CTRL_OPCODE_LOWER;
 
 
+#pragma pack(pop)
 
 
 #endif  /* #if(MP_DRIVER == 1) */
