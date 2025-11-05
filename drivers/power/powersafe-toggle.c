@@ -21,7 +21,7 @@ static struct proc_dir_entry *psafe_dir;
 
 /* Track states */
 static int latency_state = 0;          // 0 = default, 1 = 100µs
-static int prime_state   = 0;          // 0 = default, 1 = 2.84GHz
+static int prime_state   = 1;          // 0 = default, 1 = 3.18GHz
 static unsigned int io_weight_state = 0; // 0 = default, else custom
 static int master_state  = 0;          // 0 = default, 1 = optimized
 static int input_boost_state = 0;      // 0 = off, 1 = on
@@ -222,8 +222,8 @@ static ssize_t prime_freq_boost_write(struct file *file, const char __user *buf,
         return count;
 
     if (kbuf[0] == '1') {
-        //policy->max = 3187200;
-        policy->max = policy->cpuinfo.max_freq;
+        policy->max = 3187200;
+        //policy->max = policy->cpuinfo.max_freq;
         prime_state = 1;
     } else {
         //policy->max = policy->cpuinfo.max_freq; // restore default
