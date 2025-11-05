@@ -11,6 +11,7 @@
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
+#include <linux/slab.h>
 
 #define PROC_DIR "powersafe"
 #define MAX_BUF_LEN 32
@@ -102,11 +103,9 @@ static void configure_input_boost(int input_ms, int wake_ms,
 }
 
 /* Helper to swwitch govenror */
-#include <linux/fs.h>
-#include <linux/uaccess.h>
-#include <linux/slab.h>
 
-/* Write a string into a sysfs file from kernel space */
+/* 
+//Write a string into a sysfs file from kernel space 
 static int write_sysfs_file(const char *path, const char *value)
 {
     struct file *f;
@@ -129,22 +128,49 @@ static int write_sysfs_file(const char *path, const char *value)
     return (ret < 0) ? (int)ret : 0;
 }
 
-/* Convenience wrapper to set governor for a given CPU */
-static int set_cpu_governor(unsigned int cpu, const char *gov)
+// Convenience wrapper to set governor for a given CPU 
+
+void set_governor_runtime(void)
 {
-    char *path;
+    struct file *f;
+    mm_segment_t oldfs;
+    const char *path = "/sys/devices/system/cpu/cpufreq/policy7/scaling_governor";
+    const char *value = "performance\n";
+    loff_t pos = 0;
+
+    oldfs = get_fs();
+    set_fs(KERNEL_DS);
+
+    f = filp_open(path, O_WRONLY, 0);
+    if (!IS_ERR(f)) {
+        kernel_write(f, value, strlen(value), &pos);
+        filp_close(f, NULL);
+    } else {
+        pr_err("Governor write failed: %ld\n", PTR_ERR(f));
+    }
+
+    set_fs(oldfs);
+}
+*/
+
+static int set_governor(const char *gov)
+{
+    struct file *f;
+    loff_t pos = 0;
+    char buf[32];
     int ret;
 
-    path = kasprintf(GFP_KERNEL,
-                     "/sys/devices/system/cpu/cpu%u/cpufreq/scaling_governor",
-                     cpu);
-    if (!path)
-        return -ENOMEM;
+    snprintf(buf, sizeof(buf), "%s\n", gov);  // add newline
 
-    ret = write_sysfs_file(path, gov);
-    kfree(path);
+    f = filp_open("/sys/devices/system/cpu/cpufreq/policy7/scaling_governor",
+                  O_WRONLY, 0);
+    if (IS_ERR(f))
+        return PTR_ERR(f);
 
-    return ret;
+    ret = kernel_write(f, buf, strlen(buf), &pos);
+    filp_close(f, NULL);
+
+    return (ret < 0) ? ret : 0;
 }
 
 /* ---------- Latency toggle ---------- */
@@ -196,10 +222,12 @@ static ssize_t prime_freq_boost_write(struct file *file, const char __user *buf,
         return count;
 
     if (kbuf[0] == '1') {
-        policy->max = 2841600;
+        //policy->max = 3187200;
+        policy->max = policy->cpuinfo.max_freq;
         prime_state = 1;
     } else {
-        policy->max = policy->cpuinfo.max_freq; // restore default
+        //policy->max = policy->cpuinfo.max_freq; // restore default
+        policy->max = 2841600;  // capped
         prime_state = 0;
     }
     cpufreq_update_policy(policy->cpu);
@@ -363,7 +391,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 0;
         prime_state = 0;
         configure_bore(2, 1, 24, 1536, 75000000);
-        set_cpu_governor(0, "schedutil\n");
+        set_governor("schedutil");
 
         /* Restore prime max to default */
         policy = cpufreq_cpu_get(7);
@@ -392,7 +420,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 250;
         prime_state = 0;
         configure_bore(2, 2, 20, 1400, 80000000);
-	set_cpu_governor(0, "schedutil\n");
+	set_governor("schedutil");
 	
         /* Prime left at default */
         policy = cpufreq_cpu_get(7);
@@ -421,7 +449,8 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 500;
         prime_state = 1;
         configure_bore(2, 3, 12, 1024, 100000000);
-	set_cpu_governor(0, "performance\n");
+	set_governor("performance");
+
         /* Prime boosted to 3.12 GHz */
         policy = cpufreq_cpu_get(7);
         if (policy) {
@@ -449,7 +478,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         io_weight_state = 100;
         prime_state = 0;
         configure_bore(1, 0, 32, 1800, 40000000);
-        set_cpu_governor(0, "powersave\n");
+        set_governor("powersave");
 
         /* Prime back to default */
         policy = cpufreq_cpu_get(7);
