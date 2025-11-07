@@ -103,56 +103,6 @@ static void configure_input_boost(int input_ms, int wake_ms,
 }
 
 /* Helper to swwitch govenror */
-
-/* 
-//Write a string into a sysfs file from kernel space 
-static int write_sysfs_file(const char *path, const char *value)
-{
-    struct file *f;
-    mm_segment_t oldfs;
-    ssize_t ret;
-    size_t len = strlen(value);
-
-    f = filp_open(path, O_WRONLY, 0);
-    if (IS_ERR(f))
-        return PTR_ERR(f);
-
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-
-    ret = kernel_write(f, value, len, &f->f_pos);
-
-    set_fs(oldfs);
-    filp_close(f, NULL);
-
-    return (ret < 0) ? (int)ret : 0;
-}
-
-// Convenience wrapper to set governor for a given CPU 
-
-void set_governor_runtime(void)
-{
-    struct file *f;
-    mm_segment_t oldfs;
-    const char *path = "/sys/devices/system/cpu/cpufreq/policy7/scaling_governor";
-    const char *value = "performance\n";
-    loff_t pos = 0;
-
-    oldfs = get_fs();
-    set_fs(KERNEL_DS);
-
-    f = filp_open(path, O_WRONLY, 0);
-    if (!IS_ERR(f)) {
-        kernel_write(f, value, strlen(value), &pos);
-        filp_close(f, NULL);
-    } else {
-        pr_err("Governor write failed: %ld\n", PTR_ERR(f));
-    }
-
-    set_fs(oldfs);
-}
-*/
-
 static int set_governor(const char *gov)
 {
     struct file *f;
@@ -222,8 +172,8 @@ static ssize_t prime_freq_boost_write(struct file *file, const char __user *buf,
         return count;
 
     if (kbuf[0] == '1') {
-        policy->max = 3187200;
-        //policy->max = policy->cpuinfo.max_freq;
+        //policy->max = 3187200;
+        policy->max = policy->cpuinfo.max_freq;
         prime_state = 1;
     } else {
         //policy->max = policy->cpuinfo.max_freq; // restore default
@@ -305,24 +255,25 @@ static ssize_t input_boost_state_read(struct file *file, char __user *buf,
 /* BORE parameters tweaking */
 
 /* ---------- BORE parameters tweaking ---------- */
-static void configure_bore(int inherit, int smooth, int offset, int scale, int lifetime)
+static void configure_cfs(long latency, long min_gran, long wakeup_gran,
+                          int child_runs_first, int scaling)
 {
     char buf[32];
 
-    snprintf(buf, sizeof(buf), "%d", inherit);
-    write_sysfs("/proc/sys/kernel/sched_burst_inherit_type", buf);
+    snprintf(buf, sizeof(buf), "%ld", latency);
+    write_sysfs("/proc/sys/kernel/sched_latency_ns", buf);
 
-    snprintf(buf, sizeof(buf), "%d", smooth);
-    write_sysfs("/proc/sys/kernel/sched_burst_smoothness", buf);
+    snprintf(buf, sizeof(buf), "%ld", min_gran);
+    write_sysfs("/proc/sys/kernel/sched_min_granularity_ns", buf);
 
-    snprintf(buf, sizeof(buf), "%d", offset);
-    write_sysfs("/proc/sys/kernel/sched_burst_penalty_offset", buf);
+    snprintf(buf, sizeof(buf), "%ld", wakeup_gran);
+    write_sysfs("/proc/sys/kernel/sched_wakeup_granularity_ns", buf);
 
-    snprintf(buf, sizeof(buf), "%d", scale);
-    write_sysfs("/proc/sys/kernel/sched_burst_penalty_scale", buf);
+    snprintf(buf, sizeof(buf), "%d", child_runs_first);
+    write_sysfs("/proc/sys/kernel/sched_child_runs_first", buf);
 
-    snprintf(buf, sizeof(buf), "%d", lifetime);
-    write_sysfs("/proc/sys/kernel/sched_burst_cache_lifetime", buf);
+    snprintf(buf, sizeof(buf), "%d", scaling);
+    write_sysfs("/proc/sys/kernel/sched_tunable_scaling", buf);
 }
 
 
@@ -390,7 +341,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 0;
         io_weight_state = 0;
         prime_state = 0;
-        configure_bore(2, 1, 24, 1536, 75000000);
+        configure_cfs(12000000, 3000000, 2000000, 0, 1);
         set_governor("schedutil");
 
         /* Restore prime max to default */
@@ -419,7 +370,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 250;
         prime_state = 0;
-        configure_bore(2, 2, 20, 1400, 80000000);
+        configure_cfs(16000000, 4000000, 3000000, 0, 1);
 	set_governor("schedutil");
 	
         /* Prime left at default */
@@ -448,7 +399,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 500;
         prime_state = 1;
-        configure_bore(2, 3, 12, 1024, 100000000);
+        configure_cfs(12000000, 2000000, 1000000, 0, 1);
 	set_governor("performance");
 
         /* Prime boosted to 3.12 GHz */
@@ -477,7 +428,7 @@ static ssize_t master_toggle_write(struct file *file, const char __user *ubuf,
         latency_state = 1;
         io_weight_state = 100;
         prime_state = 0;
-        configure_bore(1, 0, 32, 1800, 40000000);
+        configure_cfs(24000000, 6000000, 8000000, 0, 1);
         set_governor("powersave");
 
         /* Prime back to default */
