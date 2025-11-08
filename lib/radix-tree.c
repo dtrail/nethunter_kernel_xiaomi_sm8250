@@ -1052,7 +1052,7 @@ void *radix_tree_tag_clear(struct radix_tree_root *root,
 {
 	struct radix_tree_node *node, *parent;
 	unsigned long maxindex;
-	int offset = 0;
+	int uninitialized_var(offset);
 
 	radix_tree_load_root(root, &node, &maxindex);
 	if (index > maxindex)
