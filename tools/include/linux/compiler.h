@@ -82,6 +82,8 @@
 # define noinline
 #endif
 
+#define uninitialized_var(x) x = *(&(x))
+
 #include <linux/types.h>
 
 /*
