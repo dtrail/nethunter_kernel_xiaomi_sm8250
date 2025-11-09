@@ -100,7 +100,6 @@ STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases
 
 
 
-
 Linux kernel
 ============
 
