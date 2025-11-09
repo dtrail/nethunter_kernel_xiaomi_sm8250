@@ -27,12 +27,14 @@ Happy hunting ;-)
 
 
 **Scheduler Hysteresis**
+
 *Read more: https://pastebin.com/LPTzTDAT
 
 Use Termux, Sysctl GUI or FKM (or whatever you want) to set:
 
+```bash
 "hyst_mode"
-
+```
 0 - Balanced (Default)
 1 - Performance
 2 - Battery
@@ -53,7 +55,7 @@ FKM misinterpreted it as a binary toggle, so "0" and "1" don't work here and the
 
 **Powersafe Toggle**
 
-**Change values:**
+*Change values:*
 
 *the module manages several parameters: IO-Weight, CPU Latency, Input Boost, Max Freq (superseded by other tweaks, like FDE.AI, scripts, etc.)
 
@@ -61,20 +63,20 @@ Profile | echo  | target path | Main result
 --------           |------            |-------------                                  |--------------
 Default           | 0                  | /proc/powersafe/master_toggle | Kernel default values (default)
 Balanced        | 1                  | /proc/powersafe/master_toggle | Balanced performance / battery-life
-Performance  | 2                  | /proc/powersafe/master_toggle | Boost CPU (Prime 3Ghz*)
+Performance  | 2                  | /proc/powersafe/master_toggle | Boost Prime Core
 Battery           | 3                  | /proc/powersafe/master_toggle | All parameters tweaked for best power savings, input boost disabled
 -----------
 
-*Currently not available due to a bug.
 
-**Finetuning** 
+*Finetuning*
+
 You can cat/echo to the following parameters, if needed. But **beware**, these are controlled by the master_toggle!
 Don't change them blindly!
 
-- input_boost 
-- input_boost_state 
--  io_weight 
--  latency_toggle 
+- input_boost
+- input_boost_state
+-  io_weight
+-  latency_toggle
 -  prime_boost_freq
 
 
