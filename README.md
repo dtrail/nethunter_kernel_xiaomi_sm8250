@@ -40,7 +40,10 @@ Use Termux, Sysctl GUI or FKM (or whatever you want) to set:
 
 shell:
 /* replace X with number from above */
+
+```bash
 echo X > /proc/sys/kernel/hyst_mode
+```
 
 Btw, if using FKM: don't touch this parameter: /proc/sys/kernel/sched_busy_hysteresis_enable_cpus !
 FKM misinterpreted it as a binary toggle, so "0" and "1" don't work here and the status given by the app is wrong.
