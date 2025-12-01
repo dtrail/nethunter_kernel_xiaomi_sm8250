@@ -2163,7 +2163,7 @@ static int bq2597x_charger_is_writeable(struct power_supply *psy,
 
 static int bq2597x_psy_register(struct bq2597x *bq)
 {
-	int ret;
+	ssize_t ret = 0;
 
 	bq->psy_cfg.drv_data = bq;
 	bq->psy_cfg.of_node = bq->dev->of_node;
@@ -2246,7 +2246,7 @@ static void bq2597x_dump_important_regs(struct bq2597x *bq)
 
 static void bq2597x_check_alarm_status(struct bq2597x *bq)
 {
-	int ret;
+	ssize_t ret = 0;
 	u8 flag = 0;
 	u8 stat = 0;
 

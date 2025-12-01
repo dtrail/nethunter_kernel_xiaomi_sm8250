@@ -3894,7 +3894,7 @@ static int rtl8xxxu_init_device(struct ieee80211_hw *hw)
 	bool macpower;
 	int ret;
 	u8 val8;
-	u16 val16;
+	u16 val16 = 0;
 	u32 val32;
 
 	/* Check if MAC is already powered on */

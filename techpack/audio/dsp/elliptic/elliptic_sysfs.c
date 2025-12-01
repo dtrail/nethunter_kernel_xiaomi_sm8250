@@ -503,7 +503,7 @@ static ssize_t cache_show(char *buf, int pretty)
 static ssize_t opmode_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	int length;
+	ssize_t length = 0;
 	ssize_t result;
 
 	struct elliptic_system_configuration_parameters_cache *cache =
@@ -518,7 +518,7 @@ static ssize_t opmode_show(struct device *dev,
 static ssize_t opmode_flags_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	int length;
+	ssize_t length = 0;
 	ssize_t result;
 	struct elliptic_system_configuration_parameters_cache *cache =
 				&elliptic_system_configuration_cache;
@@ -531,7 +531,7 @@ static ssize_t opmode_flags_show(struct device *dev,
 
 static ssize_t driver_version_show(char *buf)
 {
-	int length;
+	ssize_t length = 0;
 
 	length = snprintf(buf, PAGE_SIZE, "Driver version: %s-%s (%s)\n",
 				build_name, build_number, build_source_version);
@@ -542,7 +542,7 @@ static ssize_t driver_version_show(char *buf)
 static ssize_t state_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	int length = 0;
+	ssize_t length = 0;
 
 	length += driver_version_show(buf + length);
 	length += version_show_core(dev, attr, buf + length, 1);
