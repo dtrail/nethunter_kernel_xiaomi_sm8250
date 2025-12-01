@@ -99,8 +99,11 @@ STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases
 
 
 **Credits to:
+
         EmanuelCN (N0Kernel)
+        
         kvsnr113 (E404)
+        
         XDA-Forums
 
 
