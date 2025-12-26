@@ -13,8 +13,8 @@ Apollo / Alioth N0tHunter Kernel [4.19][AOSP]
         *Not to mention that MIUI is not a recommended rom for use with NetHunter.
 
 
-NOTE: I'm probably switching sources to LOS-Kernel due to some issues I couldn't fix with N0Kernel source, such as kernel modules support and compatiblity to certain other components.
-        Whenever I find the time to do that...
+NOTE: as of switching to another source, I've stopped porting it to LOS sources, because the most fitting one being the LOS 21 kernel. That source is outdated and I cannot guarantee compatibility to other android versions and Roms. Most other Apollo kernels are based on N0Kernel anyway. So, I'll stick to the current one for now, but I'll continue developing additional modules and a new power-efficiency system, which is loosely based on the logic of my old JBX-Kernel for the Moto RAZR (2012),to get better battery backup and performance gains, depending on users preference. 
+
 
 Feedback is always appreciated. You can get support on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051/
 
@@ -99,8 +99,11 @@ STABLE: https://github.com/dtrail/nethunter_kernel_xiaomi_sm8250/releases
 
 
 **Credits to:
+
         EmanuelCN (N0Kernel)
+        
         kvsnr113 (E404)
+        
         XDA-Forums
 
 
