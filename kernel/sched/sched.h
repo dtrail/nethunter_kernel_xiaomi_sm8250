@@ -2,6 +2,7 @@
 /*
  * Scheduler internal types and methods:
  */
+#include <linux/prandom.h>
 #include <linux/sched.h>
 
 #include <linux/sched/autogroup.h>
@@ -643,7 +644,7 @@ struct cfs_rq {
 	s64			avg_vruntime;
 	u64			avg_load;
 
-	u64			min_vruntime;
+	u64			zero_vruntime;
 
 	struct rb_root_cached	tasks_timeline;
 
@@ -1266,6 +1267,13 @@ static inline int cpu_of(struct rq *rq)
 #else
 	return 0;
 #endif
+}
+
+DECLARE_PER_CPU(struct rnd_state, sched_rnd_state);
+
+static inline u32 sched_rng(void)
+{
+	return prandom_u32_state(this_cpu_ptr(&sched_rnd_state));
 }
 
 struct sched_group;
@@ -1975,13 +1983,21 @@ static inline int task_on_rq_migrating(struct task_struct *p)
 	return READ_ONCE(p->on_rq) == TASK_ON_RQ_MIGRATING;
 }
 
-/*
- * wake flags
- */
-#define WF_SYNC			0x01		/* Waker goes to sleep after wakeup */
-#define WF_FORK			0x02		/* Child wakeup after fork */
-#define WF_MIGRATED	0x04		/* internal use, task got migrated */
-#define WF_ON_RQ	0x08		/* wakee is on_rq */
+/* Wake flags. The first three directly map to some SD flag value */
+#define WF_EXEC     0x02 /* Wakeup after exec; maps to SD_BALANCE_EXEC */
+#define WF_FORK     0x04 /* Wakeup after fork; maps to SD_BALANCE_FORK */
+#define WF_TTWU     0x08 /* Wakeup;            maps to SD_BALANCE_WAKE */
+
+#define WF_SYNC     0x10 /* Waker goes to sleep after wakeup */
+#define WF_MIGRATED 0x20 /* Internal use, task got migrated */
+#define WF_ON_CPU   0x40 /* Wakee is on_cpu */
+#define WF_RQ_SELECTED		0x80 /* ->select_task_rq() was called */
+
+#ifdef CONFIG_SMP
+static_assert(WF_EXEC == SD_BALANCE_EXEC);
+static_assert(WF_FORK == SD_BALANCE_FORK);
+static_assert(WF_TTWU == SD_BALANCE_WAKE);
+#endif
 
 /*
  * To aid in avoiding the subversion of "niceness" due to uneven distribution
@@ -2014,6 +2030,7 @@ extern const u32		sched_prio_to_wmult[40];
  * ENQUEUE_HEAD      - place at front of runqueue (tail if not specified)
  * ENQUEUE_REPLENISH - CBS (replenish runtime and postpone deadline)
  * ENQUEUE_MIGRATED  - the task was migrated during wakeup
+ * ENQUEUE_RQ_SELECTED - ->select_task_rq() was called
  *
  */
 
@@ -2040,6 +2057,7 @@ extern const u32		sched_prio_to_wmult[40];
 #define ENQUEUE_WAKEUP_SYNC	0x80
 #define ENQUEUE_INITIAL		0x100
 #define ENQUEUE_DELAYED		0x200
+#define ENQUEUE_RQ_SELECTED	0x400
 
 #define RETRY_TASK		((void *)-1UL)
 
@@ -2064,14 +2082,8 @@ struct sched_class {
 
 #ifdef CONFIG_SMP
 	int (*balance)(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
-#ifdef CONFIG_SCHED_WALT
-	int  (*select_task_rq)(struct task_struct *p, int task_cpu, int sd_flag, int flags,
-			       int subling_count_hint);
-#else
-	int  (*select_task_rq)(struct task_struct *p, int task_cpu, int sd_flag, int flags);
-#endif
+        int  (*select_task_rq)(struct task_struct *p, int task_cpu, int flags);
 	struct task_struct * (*pick_task)(struct rq *rq);
-
 	void (*migrate_task_rq)(struct task_struct *p, int new_cpu);
 
 	void (*task_woken)(struct rq *this_rq, struct task_struct *task);
