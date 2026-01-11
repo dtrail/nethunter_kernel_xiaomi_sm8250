@@ -30,6 +30,18 @@ suspend_state_t pm_suspend_target_state;
 #define pm_suspend_target_state	(PM_SUSPEND_ON)
 #endif
 
+#ifdef CONFIG_CHIMERA_DOOM
+/* --- CHIMERA DOOM HOOK START --- */
+// Wir deklarieren die Funktion als 'extern', da sie in deinem chimera_doom.c liegt.
+// WICHTIG: Wenn chimera_doom nicht geladen ist, muss das hier leerlaufen. 
+// Am besten kompilierst du chimera_doom.c als obj-y (fest im Kernel), nicht als Modul.
+extern bool chimera_should_block(const char *name);
+
+// Fallback, falls der Linker meckert (optional, wenn du sicher bist, dass obj-y genutzt wird)
+bool __weak chimera_should_block(const char *name) { return false; }
+/* --- CHIMERA DOOM HOOK END --- */
+#endif
+
 /*
  * If set, the suspend/hibernate code will abort transitions to a sleep state
  * if wakeup events are registered during or immediately before the transition.
@@ -589,6 +601,15 @@ void __pm_stay_awake(struct wakeup_source *ws)
 	if (!ws)
 		return;
 
+#ifdef CONFIG_CHIMERA_DOOM
+	/* CHIMERA DOOM INSERTION */
+    // Wir prüfen VOR dem Spinlock, um Performance zu sparen
+    if (ws->name && chimera_should_block(ws->name)) {
+        return; // Wir tun so, als wäre nichts passiert. Der Kernel schläft weiter.
+    }
+    /* END INSERTION */
+#endif
+
 	spin_lock_irqsave(&ws->lock, flags);
 
 	wakeup_source_report_event(ws, false);
@@ -776,6 +797,13 @@ void pm_wakeup_ws_event(struct wakeup_source *ws, unsigned int msec, bool hard)
 
 	if (!ws)
 		return;
+#ifdef CONFIG_CHIMERA_DOOM
+	/* CHIMERA DOOM INSERTION */
+    if (ws->name && chimera_should_block(ws->name)) {
+        return; // Event ignoriert. Kein Timer wird gesetzt.
+    }
+    /* END INSERTION */
+#endif
 
 	spin_lock_irqsave(&ws->lock, flags);
 

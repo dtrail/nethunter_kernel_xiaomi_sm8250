@@ -690,3 +690,9 @@ config GPIO_TESTING_MODE
 	default n
 	help
 	  Enable driver for a simple testing mode detection
+
+config CHIMERA_DOOM
+	bool "SM8250: Android 14+: A kernel module to enhance battery life by dynamically blocking certain wakelocks and services from firing too much during doze"
+	default y
+	help
+	  Enable for compiling the module. It exposes a sysfs interface to userspace
