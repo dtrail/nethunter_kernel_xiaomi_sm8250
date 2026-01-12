@@ -91,85 +91,123 @@ You can add the master to FKM tiles and switch between states by using Android's
 
 # Upcoming features
 
-**Chimera Familia: Doom Sleep Module**
+# Chimera Familia: Doom Sleep Module
+**Version 4.0 (Smart Edition)**
+
 ## Operational Guide & Troubleshooting
 
-This kernel features the **Doom Sleep Module**, a hybrid solution for **SM8250** on **Android 14+**. It combines a hard kernel-level wakelock filter with an intelligent user-space controller to silence aggressive GMS (Google Mobile Services) background activity.
+This kernel features the **Doom Sleep Module**, a hybrid solution for **SM8250** on **Android 14+**. It combines a sophisticated kernel-level wakelock filter with an intelligent user-space controller to silence aggressive GMS (Google Mobile Services) background activity while maintaining system stability via self-healing logic.
 
 ---
 
 ### 1. The Core Components
-* **Kernel Hook:** Intercepts specific wakelocks (e.g., `*gms_scheduler*`) at the source.
-* **Chimera Controller:** A background daemon that monitors screen state and battery saver mode to toggle the kernel blocker and adjust Android Standby Buckets.
-* **Master Switch:** A persistent toggle to enable or disable the entire system on the fly.
+
+* **Smart Kernel Hook:** Intercepts specific wakelocks (e.g., `*gms_scheduler*`, `*mRoutingWakeLock*`) at the source.
+    * **Grace Period:** Allows wakelocks for the first **2 seconds** after screen-off to allow apps to finish tasks cleanly.
+    * **Burst Protection (Panic Mode):** If a blocked app "spams" wakelocks (Retry Storm), the kernel temporarily disables the blocker for **10 seconds** to prevent CPU spikes and battery drain.
+* **Chimera Controller:** A background daemon that monitors screen state, handles maintenance intervals, and **live-reloads** your whitelist configuration.
+* **User Config:** A simple text file to allow specific wakelocks without rebooting.
 
 ---
 
-### 2. CLI Tool: `chimera`
-The easiest way to interact with the system is via the built-in terminal tool. Open any terminal emulator (as **root**) and use the following commands:
+### 2. Configuration: The Whitelist
+You no longer need to edit scripts to allow specific wakelocks.
 
+1.  Navigate to: `/data/adb/chimera/whitelist.conf` (using a Root Explorer).
+2.  Open the file. You will see a list of known wakelocks commented out with `#`.
+3.  **To allow a wakelock:** Remove the `#` at the start of the line.
+4.  **Save the file.**
+5.  **Done.** The controller detects the change and updates the kernel automatically within 10–30 seconds. **No reboot required.**
 
+---
 
-Check Status: Displays the Master Toggle state and the real-time kernel blocker status:
+### 3. CLI Tool: `chimera`
+Interact with the system via the built-in terminal tool. Open any terminal emulator (as **root**) and use the following commands:
+
+**Check Status**
+Displays the Master Toggle state, Kernel Blocker status, and loaded Debug/Whitelist info.
 ```bash
 chimera status
 ```
 
-Disable System: (Master Kill-Switch) If you need to debug or ensure 100% sync (e.g., for banking or urgent notifications), use this to stop all restrictions:
+**Disable System**
+(Master Kill-Switch) If you need to debug or ensure 100% sync (e.g., for banking or urgent notifications), use this to stop all restrictions immediately.
 ```bash
 chimera off
 ```
 
-Enable System: Reactivates the intelligent monitoring and the Doom Sleep logic:
-```Bash
+**Enable System**
+Reactivates the intelligent monitoring and the Doom Sleep logic.
+```bash
 chimera on
 ```
 
-3. Manual Verification (Deep Dive)If you want to verify that the "Chimera Familia" logic is actually working, you can check the nodes directly:
+**Debug Mode**
+Enables kernel logging to `dmesg`.
+```bash
+chimera debug on
+chimera debug off
+```
 
-Verify Kernel Blocker: Check if the kernel is currently ignoring the blacklisted wakelocks (1 = Blocking, 0 = Allowed):
-```Bash
+---
+
+### 4. Manual Verification (Deep Dive)
+If you want to verify that the logic is actually working, you can check the nodes directly:
+
+**Verify Kernel Blocker**
+Check if the kernel is currently armed (1 = Blocking, 0 = Allowed):
+```bash
 cat /sys/kernel/chimera_doom/active
 ```
 
-Verify GMS Standby State: Check which "Bucket" Android has assigned to Google Play Services:
-```Bash
+**Verify Loaded Whitelist**
+See which exceptions the kernel has currently loaded from your config file:
+```bash
+cat /sys/kernel/chimera_doom/whitelist
+```
+
+**Verify GMS Standby State**
+Check which "Bucket" Android has assigned to Google Play Services:
+```bash
 dumpsys usagestats | grep -A 1 "com.google.android.gms"
 ```
-- RESTRICTED: Doom Sleep is active. GMS is heavily throttled.
-- ACTIVE: Screen is on or Maintenance Window is open. GMS has full access.
+* `RESTRICTED`: Doom Sleep is active. GMS is heavily throttled.
+* `ACTIVE`: Screen is on, Grace Period is active, or Maintenance Window is open.
 
+---
 
-4. Logic Table
+### 5. Logic Table
 
-Screen State | Battery Saver | Action | GMS Bucket
------------- | ------------- | ------ | ----------
-ON           | Any           | Blocker OFF | ACTIVE
-OFF          | OFF           | Blocker ON (Sync every 60m) | RESTRICTED
-OFF          | ON            | Blocker ON (Sync every 120m)| RESTRICTED
+| Screen State | Battery Saver | Kernel State | GMS Bucket | Note |
+| :--- | :--- | :--- | :--- | :--- |
+| **ON** | Any | **Allowed** | ACTIVE | System behaves normally. |
+| **OFF** (< 2s) | Any | **Allowed** | RESTRICTED | **Grace Period:** Apps can finish "Good Night" tasks. |
+| **OFF** (> 2s) | OFF | **BLOCKED** | RESTRICTED | **Doom Mode:** Sync allowed every 60m. |
+| **OFF** (> 2s) | ON | **BLOCKED** | RESTRICTED | **Doom Mode:** Sync allowed every 120m. |
+| **OFF** (Panic) | Any | **Allowed** | RESTRICTED | **Burst Protection:** Temp. unblock (10s) if app spams. |
 
+---
 
+### 6. Troubleshooting
 
-5. Troubleshooting
+**I don't see any blocks in the logs:**
+1. Enable debug: `chimera debug on`
+2. Turn screen off and wait at least **5 seconds** (to pass the Grace Period).
+3. Check logs:
+   ```bash
+   dmesg -w | grep "Chimera"
+   ```
+   * Look for: `Chimera Doom: BLOCKED [...]`
+   * Look for: `Chimera Doom: ⚠️ BURST DETECTED!` (If Panic Mode triggers).
 
-Enable Debug:
+**Notifications are delayed:**
+This is expected behavior during Deep Sleep. If it is too aggressive for your usage:
+1.  Find the wakelock responsible for the app (via BetterBatteryStats or similar).
+2.  Add it to `/data/adb/chimera/whitelist.conf`.
+3.  Or disable the module: `chimera off`.
 
-```Bash
-echo 1 > /sys/kernel/chimera_doom/debug
-```
-
-Check logs:
-```Bash
-dmesg -w | grep "Chimera"
-```
-
-Notifications are delayed: This is expected during Deep Sleep. If it's too aggressive, use: 
-```bash
-chimera off
-```
-
-'Command not found': Ensure that /sbin is in your environment's $PATH. Must be ROOT to check.
-
+**'Command not found':**
+Ensure you are running as **Root** (`su`). The CLI tool is installed in `/system/bin`, which should be in your `$PATH` automatically by Magisk.
 
 
 # DOWNLOAD
