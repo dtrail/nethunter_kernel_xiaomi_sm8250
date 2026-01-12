@@ -148,3 +148,4 @@ arch/arm64/configs/nethunter_defconfig.new
 *.orig
 dtbo_build.sh
 arch/arm64/configs/nethunter_defconfig
+drivers/misc/nethunter_kernel_xiaomi_sm8250.code-workspace
