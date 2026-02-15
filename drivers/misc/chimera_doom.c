@@ -65,18 +65,23 @@ static char *blocked_list[] = {
     NULL
 };
 
-/* KERNLOGIK */
+/* KERNLOGIK - ULTIMATE DEBUG EDITION */
 bool chimera_should_block(const char *name)
 {
     int i = 0;
     unsigned long now = jiffies;
     unsigned long elapsed_ms;
 
+    // Basic Checks
     if (!doom_active || !name) return false;
 
     // --- 1. USER WHITELIST CHECK ---
     if (conf_whitelist[0] != '\0') {
         if (strstr(conf_whitelist, name)) {
+            // pr_err wird IMMER im dmesg angezeigt (rot/fett)
+            if (doom_debug) {
+                pr_err("CHIMERA-DEBUG: ALLOWED via Whitelist [%s]\n", name);
+            }
             return false; 
         }
     }
@@ -86,14 +91,31 @@ bool chimera_should_block(const char *name)
         if (time_after(now, panic_end_time)) {
             panic_mode = false;
             spam_counter = 0;
-            if (doom_debug) pr_info("Chimera Doom: Panic Mode ENDED. Resuming block.\n");
+            if (doom_debug) pr_err("CHIMERA-DEBUG: Panic Mode ENDED.\n");
         } else {
+            // Nur jeden 10. Spam loggen, sonst stürzt dmesg ab
+            if (doom_debug && (spam_counter % 10 == 0)) {
+                 pr_err("CHIMERA-DEBUG: ALLOWED via Panic Mode [%s]\n", name);
+            }
             return false; 
         }
     }
 
     // --- 3. GRACE PERIOD CHECK ---
-    if (jiffies_to_msecs(now - doom_start_time) < conf_grace_ms) return false; 
+    if (jiffies_to_msecs(now - doom_start_time) < conf_grace_ms) {
+        // Logge, wenn ein Wakelock der Liste in der Grace Period kommt
+        if (doom_debug) {
+            int k = 0;
+            while (blocked_list[k]) {
+                if (strstr(name, blocked_list[k])) {
+                     pr_err("CHIMERA-DEBUG: ALLOWED via Grace Period [%s]\n", name);
+                     break;
+                }
+                k++;
+            }
+        }
+        return false; 
+    }
 
     // --- 4. DUTY CYCLE CHECK ---
     if (conf_cycle_total_ms > 0) {
@@ -108,9 +130,8 @@ bool chimera_should_block(const char *name)
     while (blocked_list[i]) {
         if (strstr(name, blocked_list[i])) {
             
-            // --- BURST DETECTION ---
+            // Burst Detection Logic
             unsigned long diff = jiffies_to_msecs(now - last_block_time);
-            
             if (diff < conf_burst_window_ms) {
                 spam_counter++;
             } else {
@@ -122,17 +143,15 @@ bool chimera_should_block(const char *name)
                 panic_mode = true;
                 panic_end_time = now + msecs_to_jiffies(conf_panic_duration_ms);
                 spam_counter = 0;
-                
                 if (doom_debug) {
-                    pr_info("Chimera Doom: ⚠️ BURST DETECTED! Panic Mode for %d ms. Allowing: %s\n", 
-                            conf_panic_duration_ms, name);
+                    pr_err("CHIMERA-DEBUG: ⚠️ BURST DETECTED! Triggering Panic. [%s]\n", name);
                 }
                 return false; 
             }
-            // -----------------------
 
+            // HIER IST DER BLOCK LOG (Jetzt ohne ratelimited und mit pr_err)
             if (doom_debug) {
-                 pr_info_ratelimited("Chimera Doom: BLOCKED [%s] (Rule: %s)\n", name, blocked_list[i]);
+                 pr_err("CHIMERA-DEBUG: BLOCKED [%s] (Rule: %s)\n", name, blocked_list[i]);
             }
             return true; 
         }
