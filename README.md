@@ -92,122 +92,112 @@ You can add the master to FKM tiles and switch between states by using Android's
 # Upcoming features
 
 # Chimera Familia: Doom Sleep Module
-**Version 4.0 (Smart Edition)**
+## Operational Guide & Troubleshooting (v5.0 - Stats Edition)
 
-## Operational Guide & Troubleshooting
-
-This kernel features the **Doom Sleep Module**, a hybrid solution for **SM8250** on **Android 14+**. It combines a sophisticated kernel-level wakelock filter with an intelligent user-space controller to silence aggressive GMS (Google Mobile Services) background activity while maintaining system stability via self-healing logic.
+This kernel module and user-space controller implement the **Doom Sleep** logic for **SM8250** devices on **Android 14+**. It is a hybrid battery saver that combines a hard kernel-level wakelock filter with an intelligent daemon to silence aggressive background activity (primarily Google Mobile Services) while preserving essential hardware functions.
 
 ---
 
 ### 1. The Core Components
 
-* **Smart Kernel Hook:** Intercepts specific wakelocks (e.g., `*gms_scheduler*`, `*mRoutingWakeLock*`) at the source.
-    * **Grace Period:** Allows wakelocks for the first **2 seconds** after screen-off to allow apps to finish tasks cleanly.
-    * **Burst Protection (Panic Mode):** If a blocked app "spams" wakelocks (Retry Storm), the kernel temporarily disables the blocker for **10 seconds** to prevent CPU spikes and battery drain.
-* **Chimera Controller:** A background daemon that monitors screen state, handles maintenance intervals, and **live-reloads** your whitelist configuration.
-* **User Config:** A simple text file to allow specific wakelocks without rebooting.
+* **Kernel Hook:** Intercepts specific wakelocks at the source (`/sys/kernel/chimera_doom`).
+* **In-Kernel Stats Engine:** Efficiently tracks blocked and allowed wakelocks at the kernel level without spamming `dmesg` or wasting CPU cycles.
+* **Chimera Controller:** A background daemon that monitors screen state, applies "Doom Mode" or "Maintenance Windows" dynamically, and rotates logs.
+* **User Whitelist:** A live-reloaded configuration file to protect specific hardware drivers (like Audio/Sensors) from being blocked.
 
 ---
 
-### 2. Configuration: The Whitelist
-You no longer need to edit scripts to allow specific wakelocks.
+### 2. CLI Tool: `chimera`
 
-1.  Navigate to: `/data/adb/chimera/whitelist.conf` (using a Root Explorer).
-2.  Open the file. You will see a list of known wakelocks commented out with `#`.
-3.  **To allow a wakelock:** Remove the `#` at the start of the line.
-4.  **Save the file.**
-5.  **Done.** The controller detects the change and updates the kernel automatically within 10–30 seconds. **No reboot required.**
+The module includes a helper tool for the terminal. You do **not** need to reboot to change settings.
+Open a terminal (e.g., Termux), grant root access (`su`), and use the following commands:
 
----
+#### Check System Status
+Displays the Master Switch, Kernel Block status, Debug state, and Whitelist status.
+> `chimera status`
 
-### 3. CLI Tool: `chimera`
-Interact with the system via the built-in terminal tool. Open any terminal emulator (as **root**) and use the following commands:
+#### Enable / Disable (Master Switch)
+* **Disable:** Instantly stops all blocking and resets Google Services to default (Active). Use this for critical sync tasks, debugging, or banking apps.
+* **Enable:** Reactivates the intelligent background monitoring.
+> `chimera off`
+> `chimera on`
 
-**Check Status**
-Displays the Master Toggle state, Kernel Blocker status, and loaded Debug/Whitelist info.
-```bash
-chimera status
-```
-
-**Disable System**
-(Master Kill-Switch) If you need to debug or ensure 100% sync (e.g., for banking or urgent notifications), use this to stop all restrictions immediately.
-```bash
-chimera off
-```
-
-**Enable System**
-Reactivates the intelligent monitoring and the Doom Sleep logic.
-```bash
-chimera on
-```
-
-**Debug Mode**
-Enables kernel logging to `dmesg`.
-```bash
-chimera debug on
-chimera debug off
-```
+#### Debug Mode
+Enables verbose kernel logging to `dmesg`. Use this to see exactly which wakelocks are being blocked or allowed in real-time. *(Note: Regular stats are now handled via Markdown logs, so debug mode is only needed for deep troubleshooting).*
+> `chimera debug on`
+> `chimera debug off`
 
 ---
 
-### 4. Manual Verification (Deep Dive)
-If you want to verify that the logic is actually working, you can check the nodes directly:
+### 3. Statistics & Logging
 
-**Verify Kernel Blocker**
-Check if the kernel is currently armed (1 = Blocking, 0 = Allowed):
-```bash
-cat /sys/kernel/chimera_doom/active
-```
+Gone are the days of reading messy `dmesg` outputs. The Chimera Controller now automatically generates a beautiful Markdown table of your wakelock statistics.
 
-**Verify Loaded Whitelist**
-See which exceptions the kernel has currently loaded from your config file:
-```bash
-cat /sys/kernel/chimera_doom/whitelist
-```
+* **Log Location:** `/sdcard/Chimera/logs/chimera_stats.md`
+* **Log Rotation:** The controller automatically archives logs if they exceed 500KB and deletes archives older than **7 days**.
 
-**Verify GMS Standby State**
-Check which "Bucket" Android has assigned to Google Play Services:
-```bash
-dumpsys usagestats | grep -A 1 "com.google.android.gms"
-```
-* `RESTRICTED`: Doom Sleep is active. GMS is heavily throttled.
-* `ACTIVE`: Screen is on, Grace Period is active, or Maintenance Window is open.
+**Example Output:**
+
+| Wakelock Name | Blocked (Total) | Allowed (Total) |
+| :--- | :---: | :---: |
+| *gms_scheduler* | **142** | 3 |
+| sensor_ind | **0** | 85 |
 
 ---
 
-### 5. Logic Table
+### 4. Configuration (The Whitelist)
 
-| Screen State | Battery Saver | Kernel State | GMS Bucket | Note |
+If an app (e.g., Audio Recorder, Sensors) stops working when the screen is off, you likely need to whitelist a driver wakelock.
+
+* **Config File:** `/data/adb/chimera/whitelist.conf`
+* **How to Edit:**
+    1. Open the file with a root explorer or terminal editor (`nano` / `vi`).
+    2. Remove the `#` from a line to **allow** that wakelock.
+    3. Save the file.
+    4. **No Reboot Needed:** The controller detects changes and updates the kernel within 10-30 seconds.
+
+**Default Critical Whitelist (Audio Fix):**
+Ensure these are enabled (no `#`) to prevent microphone deadlocks:
+> `sensor_ind`
+> `*mRoutingWakeLock*`
+
+---
+
+### 5. Logic & Behavior
+
+| Screen State | Battery Saver | Kernel Blocker | GMS Bucket | Sync Interval |
 | :--- | :--- | :--- | :--- | :--- |
-| **ON** | Any | **Allowed** | ACTIVE | System behaves normally. |
-| **OFF** (< 2s) | Any | **Allowed** | RESTRICTED | **Grace Period:** Apps can finish "Good Night" tasks. |
-| **OFF** (> 2s) | OFF | **BLOCKED** | RESTRICTED | **Doom Mode:** Sync allowed every 60m. |
-| **OFF** (> 2s) | ON | **BLOCKED** | RESTRICTED | **Doom Mode:** Sync allowed every 120m. |
-| **OFF** (Panic) | Any | **Allowed** | RESTRICTED | **Burst Protection:** Temp. unblock (10s) if app spams. |
+| **ON** | Any | **OFF** (Allowed) | ACTIVE | N/A |
+| **OFF** | OFF | **ON** (Blocked) | RESTRICTED | Every 60 min |
+| **OFF** | ON | **ON** (Blocked) | RESTRICTED | Every 120 min |
+
+* **Maintenance Window:** Every 60/120 minutes, the system wakes up for 60 seconds to allow notifications and syncs, then returns to Doom Sleep.
+* **Burst Protection (Panic Mode):** If a blocked wakelock spams the kernel too aggressively (e.g., 50 times in 2 seconds), the kernel temporarily allows it for 5 seconds to prevent kernel panics and extreme CPU load.
 
 ---
 
-### 6. Troubleshooting
+### 6. Troubleshooting & Verification
 
-**I don't see any blocks in the logs:**
-1. Enable debug: `chimera debug on`
-2. Turn screen off and wait at least **5 seconds** (to pass the Grace Period).
-3. Check logs:
-   ```bash
-   dmesg -w | grep "Chimera"
-   ```
-   * Look for: `Chimera Doom: BLOCKED [...]`
-   * Look for: `Chimera Doom: ⚠️ BURST DETECTED!` (If Panic Mode triggers).
+#### Manual Verification
+To manually verify that the kernel is receiving commands without using the CLI tool:
 
-**Notifications are delayed:**
-This is expected behavior during Deep Sleep. If it is too aggressive for your usage:
-1.  Find the wakelock responsible for the app (via BetterBatteryStats or similar).
-2.  Add it to `/data/adb/chimera/whitelist.conf`.
-3.  Or disable the module: `chimera off`.
+*Check Block State (1 = Blocking, 0 = Idle):*
+> `cat /sys/kernel/chimera_doom/active`
 
-**'Command not found':**
-Ensure you are running as **Root** (`su`). The CLI tool is installed in `/system/bin`, which should be in your `$PATH` automatically by Magisk.
+*Check Kernel Stats Engine directly:*
+> `cat /sys/kernel/chimera_doom/stats`
+
+*Check GMS Standby Bucket (Expected: RESTRICTED when screen is off):*
+> `dumpsys usagestats | grep -A 1 "com.google.android.gms"`
+
+#### Common Errors
+* **"Command not found":** Ensure you are running as Root (`su`). The binary is located at `/system/bin/chimera`.
+* **Microphone/Audio stops working:** Ensure `*mRoutingWakeLock*` is uncommented in `/data/adb/chimera/whitelist.conf`.
+* **"Text file busy" during manual update:** If updating the module manually via terminal, ensure you kill the running service first (`pkill -f chimera`). *(Note: The Magisk installer handles this automatically).*
+
+
+
+
 
 
 # DOWNLOAD
