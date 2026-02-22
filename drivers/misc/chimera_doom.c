@@ -1,132 +1,133 @@
-/*
- * drivers/misc/chimera_doom.c
- * Chimera Familia - Doom Sleep Implementation v3.1 (Fix C90 Compliance)
- * Target: SM8250 / Android 14
- */
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/types.h>
-#include <linux/string.h>
-#include <linux/device.h>
-#include <linux/pm.h>
-#include <linux/suspend.h>
-#include <linux/pm_wakeup.h>
 #include <linux/kobject.h>
-#include <linux/sysfs.h>
-#include <linux/jiffies.h> 
+#include <linux/string.h>
+#include <linux/slab.h>
+#include <linux/time.h>
+#include <linux/jiffies.h>
 
-// --- STATE VARIABLES ---
-static bool doom_active = false;
-static bool doom_debug = false;
-static struct kobject *doom_kobj;
+/* --- KONFIGURATION --- */
+#define MAX_TRACKED_LOCKS 64 // Erhöht auf 64 für bessere Übersicht
+
+/* --- GLOBALE VARIABLEN --- */
+static int doom_active = 0;            // 1 = An, 0 = Aus
+static int doom_debug = 0;             // 1 = Verbose Logging
+static char conf_whitelist[1024] = ""; // User Whitelist aus dem Magisk-Modul
+
+/* Kernel Parameter Variablen */
+static unsigned int conf_grace_ms = 2000;
+static unsigned int conf_panic_duration_ms = 5000;
+static unsigned int conf_burst_threshold = 50;
+static unsigned int conf_burst_window_ms = 2000;
+
+/* Interne Status Variablen */
 static unsigned long doom_start_time = 0;
+static bool panic_mode = false;
+static unsigned long panic_end_time = 0;
+static int spam_counter = 0;
+static unsigned long last_block_time = 0;
 
-// --- USER WHITELIST BUFFER ---
-static char conf_whitelist[1024] = ""; 
-
-// --- BURST PROTECTION VARIABLES ---
-static unsigned long last_block_time = 0; 
-static int spam_counter = 0;              
-static bool panic_mode = false;           
-static unsigned long panic_end_time = 0;  
-
-// --- KONFIGURATION (Defaults) ---
-static unsigned int conf_grace_ms = 2000;       
-static unsigned int conf_cycle_total_ms = 0;    
-static unsigned int conf_cycle_allow_ms = 5000; 
-
-// Burst Settings
-static unsigned int conf_burst_threshold = 20; 
-static unsigned int conf_burst_window_ms = 100; 
-static unsigned int conf_panic_duration_ms = 10000; 
-
-// --------------------------------------------------------------------------
-// CHIMERA HITLIST
-// --------------------------------------------------------------------------
-static char *blocked_list[] = {
-    // --- Google Play Services (GMS) ---
-    "*gms_scheduler*", "GcmSchedulerWakeupService", "QosUploaderService",
-    "PayGcmTaskService", "Google_C2DM", "ChromeSync", "*SendReportAction*",
-    
-    // --- System / Core ---
-    "*SyncLoopWakeLock*", "*job_scheduler*", "*NetworkStats*", 
-    "*LocationManagerService*", 
-    
-    // --- Hardware / Drivers ---
-    "wlan_pno_wl", "sensor_ind", 
-    "*mRoutingWakeLock*",      
-    "*hal_bluetooth_lock*",    
-    
-    // --- Qualcomm / Kernel ---
-    "qcom_rx_wakelock", "*Rcu*",
-    
+/* Blocked List (Hardcoded Fallback - GMS Fokus) */
+static const char *blocked_list[] = {
+    "*gms_scheduler*",
+    "GcmSchedulerWakeupService",
+    "QosUploaderService",
+    "PayGcmTaskService",
+    "Google_C2DM",
+    "ChromeSync",
+    "*SendReportAction*",
+    "*SyncLoopWakeLock*",
+    "*job_scheduler*",
+    "*NetworkStats*",
+    "*LocationManagerService*",
     NULL
 };
 
-/* KERNLOGIK - ULTIMATE DEBUG EDITION */
+/* --- STATISTIK STRUKTUR --- */
+struct chimera_stat {
+    char name[64];
+    unsigned int count_blocked;
+    unsigned int count_allowed;
+    unsigned long last_hit_jiffies;
+};
+
+static struct chimera_stat stats_db[MAX_TRACKED_LOCKS];
+static int stats_count = 0;
+
+/* --- HELPER: STATISTIK UPDATE --- */
+void update_stats(const char *name, bool blocked) {
+    int i;
+    unsigned long now = jiffies;
+
+    // 1. Suche in existierender Liste
+    for (i = 0; i < stats_count; i++) {
+        if (strcmp(stats_db[i].name, name) == 0) {
+            if (blocked) stats_db[i].count_blocked++;
+            else stats_db[i].count_allowed++;
+            stats_db[i].last_hit_jiffies = now;
+            return;
+        }
+    }
+
+    // 2. Neu anlegen, wenn Platz ist
+    if (stats_count < MAX_TRACKED_LOCKS) {
+        strlcpy(stats_db[stats_count].name, name, 64);
+        if (blocked) stats_db[stats_count].count_blocked = 1;
+        else stats_db[stats_count].count_allowed = 1;
+        stats_db[stats_count].last_hit_jiffies = now;
+        stats_count++;
+    }
+}
+
+/* --- KERNLOGIK --- */
 bool chimera_should_block(const char *name)
 {
     int i = 0;
     unsigned long now = jiffies;
-    unsigned long elapsed_ms;
 
-    // Basic Checks
-    if (!doom_active || !name) return false;
+    // ==========================================================
+    // BUG FIX: Verhindert leere [] Logs und CPU-Spam!
+    // Ignoriere NULL, leere Strings oder Strings mit nur 1 Zeichen (z.B. " ")
+    // ==========================================================
+    if (!name || strlen(name) < 2) {
+        return false; 
+    }
 
-    // --- 1. USER WHITELIST CHECK ---
+    // Wenn Master-Switch aus, alles durchlassen
+    if (!doom_active) return false;
+
+    // --- 1. USER WHITELIST ---
     if (conf_whitelist[0] != '\0') {
         if (strstr(conf_whitelist, name)) {
-            // pr_err wird IMMER im dmesg angezeigt (rot/fett)
-            if (doom_debug) {
-                pr_err("CHIMERA-DEBUG: ALLOWED via Whitelist [%s]\n", name);
-            }
-            return false; 
+            // Logge nur bei Debug, update aber IMMER die Statistik
+            if (doom_debug) pr_info("CHIMERA-DEBUG: ALLOWED via Whitelist [%s]\n", name);
+            update_stats(name, false);
+            return false;
         }
     }
 
-    // --- 2. PANIC MODE CHECK ---
+    // --- 2. GRACE PERIOD ---
+    // In den ersten Sekunden nach Screen Off sind wir gnädig
+    if (jiffies_to_msecs(now - doom_start_time) < conf_grace_ms) {
+        // Zählen in der DB als "Allowed", aber loggen nicht jeden Mist ins dmesg
+        update_stats(name, false); 
+        return false;
+    }
+
+    // --- 3. PANIC MODE CHECK ---
     if (panic_mode) {
         if (time_after(now, panic_end_time)) {
             panic_mode = false;
             spam_counter = 0;
             if (doom_debug) pr_err("CHIMERA-DEBUG: Panic Mode ENDED.\n");
         } else {
-            // Nur jeden 10. Spam loggen, sonst stürzt dmesg ab
-            if (doom_debug && (spam_counter % 10 == 0)) {
-                 pr_err("CHIMERA-DEBUG: ALLOWED via Panic Mode [%s]\n", name);
-            }
-            return false; 
+            update_stats(name, false);
+            return false;
         }
     }
 
-    // --- 3. GRACE PERIOD CHECK ---
-    if (jiffies_to_msecs(now - doom_start_time) < conf_grace_ms) {
-        // Logge, wenn ein Wakelock der Liste in der Grace Period kommt
-        if (doom_debug) {
-            int k = 0;
-            while (blocked_list[k]) {
-                if (strstr(name, blocked_list[k])) {
-                     pr_err("CHIMERA-DEBUG: ALLOWED via Grace Period [%s]\n", name);
-                     break;
-                }
-                k++;
-            }
-        }
-        return false; 
-    }
-
-    // --- 4. DUTY CYCLE CHECK ---
-    if (conf_cycle_total_ms > 0) {
-        elapsed_ms = jiffies_to_msecs(now - doom_start_time);
-        if ((elapsed_ms % conf_cycle_total_ms) >= (conf_cycle_total_ms - conf_cycle_allow_ms)) {
-            spam_counter = 0; 
-            return false; 
-        }
-    }
-
-    // --- 5. BLACKLIST MATCHING ---
+    // --- 4. BLACKLIST MATCHING ---
     while (blocked_list[i]) {
         if (strstr(name, blocked_list[i])) {
             
@@ -135,7 +136,7 @@ bool chimera_should_block(const char *name)
             if (diff < conf_burst_window_ms) {
                 spam_counter++;
             } else {
-                spam_counter = 0; 
+                spam_counter = 0;
             }
             last_block_time = now;
 
@@ -143,110 +144,143 @@ bool chimera_should_block(const char *name)
                 panic_mode = true;
                 panic_end_time = now + msecs_to_jiffies(conf_panic_duration_ms);
                 spam_counter = 0;
-                if (doom_debug) {
-                    pr_err("CHIMERA-DEBUG: ⚠️ BURST DETECTED! Triggering Panic. [%s]\n", name);
-                }
-                return false; 
+                if (doom_debug) pr_err("CHIMERA-DEBUG: ⚠️ BURST DETECTED! Triggering Panic. [%s]\n", name);
+                update_stats(name, false);
+                return false;
             }
 
-            // HIER IST DER BLOCK LOG (Jetzt ohne ratelimited und mit pr_err)
-            if (doom_debug) {
-                 pr_err("CHIMERA-DEBUG: BLOCKED [%s] (Rule: %s)\n", name, blocked_list[i]);
-            }
+            // Block durchführen!
+            if (doom_debug) pr_err("CHIMERA-DEBUG: BLOCKED [%s] (Rule: %s)\n", name, blocked_list[i]);
+            update_stats(name, true);
             return true; 
         }
         i++;
     }
+
+    // Wenn er nicht auf der Blacklist steht: Erlauben
     return false;
 }
+EXPORT_SYMBOL(chimera_should_block);
 
-// --------------------------------------------------------------------------
-// SYSFS HANDLING
-// --------------------------------------------------------------------------
+/* --- SYSFS HANDLER --- */
 
-// --- Active Switch ---
+// ACTIVE (Read/Write)
 static ssize_t active_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
     return sprintf(buf, "%d\n", doom_active);
 }
-
 static ssize_t active_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
-    int ret, val;
-    bool new_state; // FIX: Variable nach oben geschoben
-
-    ret = kstrtoint(buf, 10, &val);
-    if (ret < 0) return ret;
-    
-    new_state = (val != 0); // FIX: Zuweisung hier unten
-    
-    if (new_state && !doom_active) doom_start_time = jiffies; 
-    doom_active = new_state;
+    int val;
+    if (kstrtoint(buf, 10, &val) == 0) {
+        if (val == 1 && doom_active == 0) doom_start_time = jiffies; // Timer Reset bei Screen Off
+        doom_active = val;
+    }
     return count;
 }
-static struct kobj_attribute active_attr = __ATTR(active, 0644, active_show, active_store);
 
-// --- Whitelist (String) ---
+// DEBUG (Read/Write)
+static ssize_t debug_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    return sprintf(buf, "%d\n", doom_debug);
+}
+static ssize_t debug_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
+    int val;
+    if (kstrtoint(buf, 10, &val) == 0) doom_debug = val;
+    return count;
+}
+
+// WHITELIST (Read/Write)
 static ssize_t whitelist_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
     return sprintf(buf, "%s\n", conf_whitelist);
 }
-
 static ssize_t whitelist_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
-    size_t len; // FIX: Variable nach oben geschoben
-
-    snprintf(conf_whitelist, sizeof(conf_whitelist), "%s", buf);
-    
-    len = strlen(conf_whitelist); // FIX: Zuweisung hier unten
-    if (len > 0 && conf_whitelist[len-1] == '\n') conf_whitelist[len-1] = '\0';
-    
-    if (doom_debug) pr_info("Chimera: New Whitelist loaded: [%s]\n", conf_whitelist);
+    if (count < sizeof(conf_whitelist)) {
+        strlcpy(conf_whitelist, buf, sizeof(conf_whitelist));
+        if (conf_whitelist[count-1] == '\n') conf_whitelist[count-1] = '\0';
+    }
     return count;
 }
-static struct kobj_attribute whitelist_attr = __ATTR(whitelist, 0644, whitelist_show, whitelist_store);
 
-// --- Config Values (UInts) ---
-#define CHIMERA_ATTR_UINT(_name, _var) \
-static ssize_t _name##_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) { \
-    return sprintf(buf, "%u\n", _var); \
-} \
-static ssize_t _name##_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) { \
-    unsigned int val; \
-    if (kstrtouint(buf, 10, &val) < 0) return -EINVAL; \
-    _var = val; \
-    return count; \
-} \
-static struct kobj_attribute _name##_attr = __ATTR(_name, 0644, _name##_show, _name##_store);
+// GRACE_MS (Read/Write)
+static ssize_t grace_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    return sprintf(buf, "%u\n", conf_grace_ms);
+}
+static ssize_t grace_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
+    kstrtouint(buf, 10, &conf_grace_ms);
+    return count;
+}
 
-CHIMERA_ATTR_UINT(debug, doom_debug)
-CHIMERA_ATTR_UINT(grace_ms, conf_grace_ms)
-CHIMERA_ATTR_UINT(cycle_total_ms, conf_cycle_total_ms)
-CHIMERA_ATTR_UINT(cycle_allow_ms, conf_cycle_allow_ms)
-CHIMERA_ATTR_UINT(panic_ms, conf_panic_duration_ms)
+// PANIC_MS (Read/Write)
+static ssize_t panic_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    return sprintf(buf, "%u\n", conf_panic_duration_ms);
+}
+static ssize_t panic_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
+    kstrtouint(buf, 10, &conf_panic_duration_ms);
+    return count;
+}
 
-// --- Attribute Group ---
-static struct attribute *doom_attrs[] = {
+// STATS (Read Only - Gibt Daten für die Markdown-Tabelle aus)
+static ssize_t stats_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    int i;
+    int len = 0;
+    
+    // Header für den Controller zum Parsen
+    len += sprintf(buf + len, "Name|Blocked|Allowed\n");
+    
+    for (i = 0; i < stats_count; i++) {
+        // Verhindere Buffer Overflow (Sysfs Buffer ist max PAGE_SIZE, ca 4096 bytes)
+        if (len > 3500) break; 
+        
+        len += sprintf(buf + len, "%s|%u|%u\n", 
+                       stats_db[i].name, 
+                       stats_db[i].count_blocked, 
+                       stats_db[i].count_allowed);
+    }
+    return len;
+}
+
+/* Attribute Definitionen */
+static struct kobj_attribute active_attr = __ATTR(active, 0664, active_show, active_store);
+static struct kobj_attribute debug_attr = __ATTR(debug, 0664, debug_show, debug_store);
+static struct kobj_attribute whitelist_attr = __ATTR(whitelist, 0664, whitelist_show, whitelist_store);
+static struct kobj_attribute grace_attr = __ATTR(grace_ms, 0664, grace_show, grace_store);
+static struct kobj_attribute panic_attr = __ATTR(panic_ms, 0664, panic_show, panic_store);
+static struct kobj_attribute stats_attr = __ATTR(stats, 0444, stats_show, NULL);
+
+static struct attribute *chimera_attrs[] = {
     &active_attr.attr,
     &debug_attr.attr,
     &whitelist_attr.attr,
-    &grace_ms_attr.attr,
-    &cycle_total_ms_attr.attr,
-    &cycle_allow_ms_attr.attr,
-    &panic_ms_attr.attr,
+    &grace_attr.attr,
+    &panic_attr.attr,
+    &stats_attr.attr,
     NULL,
 };
 
-static struct attribute_group doom_attr_group = { .attrs = doom_attrs };
+static struct attribute_group chimera_attr_group = {
+    .attrs = chimera_attrs,
+};
 
-static int __init chimera_init(void) {
-    int error;
-    doom_kobj = kobject_create_and_add("chimera_doom", kernel_kobj);
-    if (!doom_kobj) return -ENOMEM;
-    error = sysfs_create_group(doom_kobj, &doom_attr_group);
-    if (error) kobject_put(doom_kobj);
-    return error;
+static struct kobject *chimera_kobj;
+
+static int __init chimera_init(void)
+{
+    int retval;
+    chimera_kobj = kobject_create_and_add("chimera_doom", kernel_kobj);
+    if (!chimera_kobj) return -ENOMEM;
+
+    retval = sysfs_create_group(chimera_kobj, &chimera_attr_group);
+    if (retval) kobject_put(chimera_kobj);
+
+    pr_info("Chimera Doom Module Loaded (v4.3 Stats Edition)\n");
+    return retval;
 }
 
-static void __exit chimera_exit(void) {
-    kobject_put(doom_kobj);
+static void __exit chimera_exit(void)
+{
+    kobject_put(chimera_kobj);
+    pr_info("Chimera Doom Module Unloaded\n");
 }
 
 module_init(chimera_init);
 module_exit(chimera_exit);
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Chimera Familia");
