@@ -8,12 +8,14 @@
 #include <linux/jiffies.h>
 
 /* --- KONFIGURATION --- */
-#define MAX_TRACKED_LOCKS 64 // Erhöht auf 64 für bessere Übersicht
+// Auf 128 erhöht für besseres Profiling von System-Wakelocks!
+#define MAX_TRACKED_LOCKS 128 
 
 /* --- GLOBALE VARIABLEN --- */
-static int doom_active = 0;            // 1 = An, 0 = Aus
-static int doom_debug = 0;             // 1 = Verbose Logging
-static char conf_whitelist[1024] = ""; // User Whitelist aus dem Magisk-Modul
+static int doom_active = 0;
+static int doom_debug = 0;
+// Puffer auf 4096 Bytes erhöht, damit auch riesige User-Blocklisten passen
+static char conf_blocklist[4096] = ""; 
 
 /* Kernel Parameter Variablen */
 static unsigned int conf_grace_ms = 2000;
@@ -27,22 +29,6 @@ static bool panic_mode = false;
 static unsigned long panic_end_time = 0;
 static int spam_counter = 0;
 static unsigned long last_block_time = 0;
-
-/* Blocked List (Hardcoded Fallback - GMS Fokus) */
-static const char *blocked_list[] = {
-    "*gms_scheduler*",
-    "GcmSchedulerWakeupService",
-    "QosUploaderService",
-    "PayGcmTaskService",
-    "Google_C2DM",
-    "ChromeSync",
-    "*SendReportAction*",
-    "*SyncLoopWakeLock*",
-    "*job_scheduler*",
-    "*NetworkStats*",
-    "*LocationManagerService*",
-    NULL
-};
 
 /* --- STATISTIK STRUKTUR --- */
 struct chimera_stat {
@@ -80,15 +66,14 @@ void update_stats(const char *name, bool blocked) {
     }
 }
 
-/* --- KERNLOGIK --- */
+/* --- KERNLOGIK (INVERTIERT: Standard ist ERLAUBT) --- */
 bool chimera_should_block(const char *name)
 {
-    int i = 0;
     unsigned long now = jiffies;
 
     // ==========================================================
     // BUG FIX: Verhindert leere [] Logs und CPU-Spam!
-    // Ignoriere NULL, leere Strings oder Strings mit nur 1 Zeichen (z.B. " ")
+    // Ignoriere NULL, leere Strings oder Strings mit nur 1 Zeichen
     // ==========================================================
     if (!name || strlen(name) < 2) {
         return false; 
@@ -97,25 +82,14 @@ bool chimera_should_block(const char *name)
     // Wenn Master-Switch aus, alles durchlassen
     if (!doom_active) return false;
 
-    // --- 1. USER WHITELIST ---
-    if (conf_whitelist[0] != '\0') {
-        if (strstr(conf_whitelist, name)) {
-            // Logge nur bei Debug, update aber IMMER die Statistik
-            if (doom_debug) pr_info("CHIMERA-DEBUG: ALLOWED via Whitelist [%s]\n", name);
-            update_stats(name, false);
-            return false;
-        }
-    }
-
-    // --- 2. GRACE PERIOD ---
+    // --- 1. GRACE PERIOD ---
     // In den ersten Sekunden nach Screen Off sind wir gnädig
     if (jiffies_to_msecs(now - doom_start_time) < conf_grace_ms) {
-        // Zählen in der DB als "Allowed", aber loggen nicht jeden Mist ins dmesg
         update_stats(name, false); 
         return false;
     }
 
-    // --- 3. PANIC MODE CHECK ---
+    // --- 2. PANIC MODE CHECK ---
     if (panic_mode) {
         if (time_after(now, panic_end_time)) {
             panic_mode = false;
@@ -127,11 +101,12 @@ bool chimera_should_block(const char *name)
         }
     }
 
-    // --- 4. BLACKLIST MATCHING ---
-    while (blocked_list[i]) {
-        if (strstr(name, blocked_list[i])) {
+    // --- 3. USER BLOCKLIST MATCHING ---
+    // Wenn die Liste nicht leer ist und der Name darin vorkommt -> BLOCKEN
+    if (conf_blocklist[0] != '\0') {
+        if (strstr(conf_blocklist, name)) {
             
-            // Burst Detection Logic
+            // Burst Detection Logic (Nur für geblockte Wakelocks)
             unsigned long diff = jiffies_to_msecs(now - last_block_time);
             if (diff < conf_burst_window_ms) {
                 spam_counter++;
@@ -150,14 +125,17 @@ bool chimera_should_block(const char *name)
             }
 
             // Block durchführen!
-            if (doom_debug) pr_err("CHIMERA-DEBUG: BLOCKED [%s] (Rule: %s)\n", name, blocked_list[i]);
+            if (doom_debug) pr_err("CHIMERA-DEBUG: BLOCKED via User-List [%s]\n", name);
             update_stats(name, true);
             return true; 
         }
-        i++;
     }
 
-    // Wenn er nicht auf der Blacklist steht: Erlauben
+    // --- 4. DEFAULT: ERLAUBEN ---
+    // Wenn er NICHT auf der Blocklist steht, darf er durch.
+    // Wir loggen das nur bei Debug, aber zählen es immer in der Statistik!
+    if (doom_debug) pr_info("CHIMERA-DEBUG: ALLOWED (Not in Blocklist) [%s]\n", name);
+    update_stats(name, false);
     return false;
 }
 EXPORT_SYMBOL(chimera_should_block);
@@ -187,14 +165,14 @@ static ssize_t debug_store(struct kobject *kobj, struct kobj_attribute *attr, co
     return count;
 }
 
-// WHITELIST (Read/Write)
-static ssize_t whitelist_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
-    return sprintf(buf, "%s\n", conf_whitelist);
+// BLOCKLIST (Read/Write - ehemals whitelist)
+static ssize_t blocklist_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf) {
+    return sprintf(buf, "%s\n", conf_blocklist);
 }
-static ssize_t whitelist_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
-    if (count < sizeof(conf_whitelist)) {
-        strlcpy(conf_whitelist, buf, sizeof(conf_whitelist));
-        if (conf_whitelist[count-1] == '\n') conf_whitelist[count-1] = '\0';
+static ssize_t blocklist_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count) {
+    if (count < sizeof(conf_blocklist)) {
+        strlcpy(conf_blocklist, buf, sizeof(conf_blocklist));
+        if (conf_blocklist[count-1] == '\n') conf_blocklist[count-1] = '\0';
     }
     return count;
 }
@@ -226,8 +204,10 @@ static ssize_t stats_show(struct kobject *kobj, struct kobj_attribute *attr, cha
     len += sprintf(buf + len, "Name|Blocked|Allowed\n");
     
     for (i = 0; i < stats_count; i++) {
-        // Verhindere Buffer Overflow (Sysfs Buffer ist max PAGE_SIZE, ca 4096 bytes)
-        if (len > 3500) break; 
+        // SICHERHEIT: Verhindere Buffer Overflow! 
+        // Der Sysfs Buffer ist max PAGE_SIZE (ca. 4096 bytes). 
+        // Wir brechen ab, bevor wir das Limit erreichen.
+        if (len > 3800) break; 
         
         len += sprintf(buf + len, "%s|%u|%u\n", 
                        stats_db[i].name, 
@@ -240,7 +220,7 @@ static ssize_t stats_show(struct kobject *kobj, struct kobj_attribute *attr, cha
 /* Attribute Definitionen */
 static struct kobj_attribute active_attr = __ATTR(active, 0664, active_show, active_store);
 static struct kobj_attribute debug_attr = __ATTR(debug, 0664, debug_show, debug_store);
-static struct kobj_attribute whitelist_attr = __ATTR(whitelist, 0664, whitelist_show, whitelist_store);
+static struct kobj_attribute blocklist_attr = __ATTR(blocklist, 0664, blocklist_show, blocklist_store);
 static struct kobj_attribute grace_attr = __ATTR(grace_ms, 0664, grace_show, grace_store);
 static struct kobj_attribute panic_attr = __ATTR(panic_ms, 0664, panic_show, panic_store);
 static struct kobj_attribute stats_attr = __ATTR(stats, 0444, stats_show, NULL);
@@ -248,7 +228,7 @@ static struct kobj_attribute stats_attr = __ATTR(stats, 0444, stats_show, NULL);
 static struct attribute *chimera_attrs[] = {
     &active_attr.attr,
     &debug_attr.attr,
-    &whitelist_attr.attr,
+    &blocklist_attr.attr,
     &grace_attr.attr,
     &panic_attr.attr,
     &stats_attr.attr,
@@ -270,7 +250,7 @@ static int __init chimera_init(void)
     retval = sysfs_create_group(chimera_kobj, &chimera_attr_group);
     if (retval) kobject_put(chimera_kobj);
 
-    pr_info("Chimera Doom Module Loaded (v4.3 Stats Edition)\n");
+    pr_info("Chimera Doom Module Loaded (v6.0 Profiles Edition)\n");
     return retval;
 }
 
