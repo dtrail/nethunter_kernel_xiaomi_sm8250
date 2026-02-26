@@ -89,7 +89,7 @@ You can add the master to FKM tiles and switch between states by using Android's
 
 
 
-***Chimera Familia: Doom Sleep Module
+**Chimera Familia: Doom Sleep Module**
 ## Operational Guide & Troubleshooting (v6.0 - Profiles & Stats Edition)
 
 This kernel module and user-space controller implement the **Doom Sleep** logic for **SM8250** devices on **Android 14+**. It is a hybrid battery saver that combines a hard kernel-level wakelock filter with an intelligent daemon to silence aggressive background activity. 
