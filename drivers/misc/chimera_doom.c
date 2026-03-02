@@ -115,15 +115,18 @@ bool chimera_should_block(const char *name)
             }
             last_block_time = now;
 
-            if (spam_counter >= conf_burst_threshold) {
-                panic_mode = true;
-                panic_end_time = now + msecs_to_jiffies(conf_panic_duration_ms);
-                spam_counter = 0;
-                if (doom_debug) pr_err("CHIMERA-DEBUG: ⚠️ BURST DETECTED! Triggering Panic. [%s]\n", name);
-                update_stats(name, false);
-                return false;
+            if (spam_counter >= conf_burst_threshold) {
+                panic_mode = true;
+                panic_end_time = now + msecs_to_jiffies(conf_panic_duration_ms);
+                spam_counter = 0;
+                // NEW: Always broadcast this to dmesg so the controller can catch it
+                pr_crit("CHIMERA-EMERGENCY: %s\n", name); 
+                
+                if (doom_debug) pr_err("CHIMERA-DEBUG: ⚠️ BURST DETECTED! Triggering Panic. [%s]\n", name);
+                update_stats(name, false);
+                return false;
             }
-
+            
             // Block durchführen!
             if (doom_debug) pr_err("CHIMERA-DEBUG: BLOCKED via User-List [%s]\n", name);
             update_stats(name, true);
