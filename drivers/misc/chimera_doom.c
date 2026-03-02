@@ -101,46 +101,61 @@ bool chimera_should_block(const char *name)
         }
     }
 
-    // --- 3. USER BLOCKLIST MATCHING ---
-    // Wenn die Liste nicht leer ist und der Name darin vorkommt -> BLOCKEN
-    if (conf_blocklist[0] != '\0') {
-        if (strstr(conf_blocklist, name)) {
-            
-            // Burst Detection Logic (Nur für geblockte Wakelocks)
-            unsigned long diff = jiffies_to_msecs(now - last_block_time);
-            if (diff < conf_burst_window_ms) {
-                spam_counter++;
-            } else {
-                spam_counter = 0;
-            }
-            last_block_time = now;
-
+// --- 3. USER BLOCKLIST MATCHING ---
+    if (conf_blocklist[0] != '\0') {
+        bool match_found = false;
+        int i = 0, t_len = 0;
+        char token[128]; // Max Länge für einen einzelnen Wakelock-Namen
+        
+        // Kommagetrennte Liste sicher parsen (ohne den Kernel-Stack zu sprengen)
+        while (conf_blocklist[i] != '\0') {
+            if (conf_blocklist[i] == ',') {
+                token[t_len] = '\0';
+                if (t_len > 1 && strstr(name, token) != NULL) {
+                    match_found = true; break;
+                }
+                t_len = 0;
+            } else if (t_len < sizeof(token) - 1) {
+                token[t_len++] = conf_blocklist[i];
+            }
+            i++;
+        }
+        // Letztes Token nach der Schleife prüfen
+        if (!match_found && t_len > 1) {
+            token[t_len] = '\0';
+            if (strstr(name, token) != NULL) {
+                match_found = true;
+            }
+        }
+
+        // Wenn ein Match gefunden wurde -> BLOCKEN
+        if (match_found) {
+            
+            // Burst Detection Logic
+            unsigned long diff = jiffies_to_msecs(now - last_block_time);
+            if (diff < conf_burst_window_ms) {
+                spam_counter++;
+            } else {
+                spam_counter = 0;
+            }
+            last_block_time = now;
+
             if (spam_counter >= conf_burst_threshold) {
                 panic_mode = true;
                 panic_end_time = now + msecs_to_jiffies(conf_panic_duration_ms);
                 spam_counter = 0;
-                // NEW: Always broadcast this to dmesg so the controller can catch it
                 pr_crit("CHIMERA-EMERGENCY: %s\n", name); 
                 
                 if (doom_debug) pr_err("CHIMERA-DEBUG: ⚠️ BURST DETECTED! Triggering Panic. [%s]\n", name);
                 update_stats(name, false);
                 return false;
-            }
-            
-            // Block durchführen!
-            if (doom_debug) pr_err("CHIMERA-DEBUG: BLOCKED via User-List [%s]\n", name);
-            update_stats(name, true);
-            return true; 
-        }
+            }
+            
+            if (doom_debug) pr_err("CHIMERA-DEBUG: BLOCKED via User-List [%s]\n", name);
+            update_stats(name, true);
+            return true; 
+        }
     }
-
-    // --- 4. DEFAULT: ERLAUBEN ---
-    // Wenn er NICHT auf der Blocklist steht, darf er durch.
-    // Wir loggen das nur bei Debug, aber zählen es immer in der Statistik!
-    if (doom_debug) pr_info("CHIMERA-DEBUG: ALLOWED (Not in Blocklist) [%s]\n", name);
-    update_stats(name, false);
-    return false;
-}
 EXPORT_SYMBOL(chimera_should_block);
 
 /* --- SYSFS HANDLER --- */
