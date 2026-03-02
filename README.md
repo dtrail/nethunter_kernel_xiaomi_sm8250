@@ -114,7 +114,7 @@ This kernel module and user-space controller implement the **Doom Sleep** logic 
 You have two ways to interact with the module. You do **not** need to reboot to change settings.
 
 #### A. The Graphical WebUI (Recommended)
-Open your root manager (KernelSU or supported Magisk forks), navigate to your modules, and tap the **Action/Settings Icon** on the Chimera module. 
+Either use the action button on the module in Magisk, or use MMRL's WebUI (or the dedicted WebUI+ app, found in the Play Store, navigate to your modules, and tap the **Action/Settings Icon** on the Chimera module. 
 * View live wakelock statistics (Allowed vs. Blocked).
 * Instantly Block/Allow wakelocks with a single tap.
 * Add custom wakelocks manually.
@@ -255,6 +255,7 @@ See Documentation/00-INDEX for a list of what is contained in each file.
 Please read the Documentation/process/changes.rst file, as it contains the
 requirements for building and running the kernel, and information about
 the problems which may result by upgrading your kernel.
+
 
 
 
