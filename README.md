@@ -89,9 +89,7 @@ You can add the master to FKM tiles and switch between states by using Android's
 
 
 
-# Upcoming features
-
-# Chimera Familia: Doom Sleep Module
+**Chimera Familia: Doom Sleep Module**
 ## Operational Guide & Troubleshooting (v6.0 - Profiles & Stats Edition)
 
 This kernel module and user-space controller implement the **Doom Sleep** logic for **SM8250** devices on **Android 14+**. It is a hybrid battery saver that combines a hard kernel-level wakelock filter with an intelligent daemon to silence aggressive background activity. 
@@ -167,7 +165,7 @@ The entire blocking logic is controlled by a simple text file.
 # [timerfd]
 
 # --- HARDWARE & AUDIO (Commented = ALLOWED) ---
-# Do NOT uncomment these unless you want broken audio!
+# Do NOT uncomment these!  tests revealed, that It will cause the microphone to not work after 2-3 days (only in messenger apps. Phone calls continue working. Technically those apps receive the mic in locked state due to blocking.)
 # sensor_ind
 # *mRoutingWakeLock*
 
@@ -230,6 +228,7 @@ To manually verify the kernel engine without using the CLI tool:
 #### Common Errors
 * **"Command not found":** Ensure you are running as Root (`su`). The binary is located at `/system/bin/chimera`.
 * **Microphone/Audio stops working:** You accidentally uncommented a hardware wakelock like `*mRoutingWakeLock*` in your `blocklist.conf`. Add the `#` back!
+
 * **Where are my logs?** The markdown table is located in the Magisk directory (`/data/adb/chimera/logs/`) to prevent Android storage permission issues. Use a root explorer to view them.
 
 
