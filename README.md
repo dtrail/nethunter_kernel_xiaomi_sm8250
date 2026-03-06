@@ -11,9 +11,12 @@
   ----> However, it might induce instability, because I did not build that DTBO together with the kernel. Since I'm not using MIUI, I probably won't support it later.
   \*Not to mention that MIUI is not a recommended rom for use with NetHunter.
 
-NOTE: as of switching to another source, I've stopped porting it to LOS sources, because the most fitting one being the LOS 21 kernel. That source is outdated and I cannot guarantee compatibility to other android versions and Roms. Most other Apollo kernels are based on N0Kernel anyway. So, I'll stick to the current one for now, but I'll continue developing additional modules and a new power-efficiency system, which is loosely based on the logic of my old JBX-Kernel for the Moto RAZR (2012),to get better battery backup and performance gains, depending on users preference.
+NOTE: I'm preparing to release a new variant soon: N0tHunter-Lite (same kernel with additional KSU but no NetHunter support. For those whole like to use it for my powersaving and performance modules.) 
 
-Feedback is always appreciated. You can get support on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051/
+Feedback is always appreciated. 
+
+You can get support here in the discussion and issues tabs, or on the XDA-Thread here: https://xdaforums.com/t/kernel-4-19-a13-apollo-kali-nethunter-n0thunter-kernel-12-13.4703051
+
 
 Happy hunting ;-)
 
