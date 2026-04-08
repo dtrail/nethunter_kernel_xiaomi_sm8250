@@ -1,6 +1,7 @@
 [submodule "kali-nethunter-kernel"]
 	path = kali-nethunter-kernel
 	url = https://github.com/dtrail/kali-nethunter-kernel.git
+	branch = rls
 [submodule "drivers/net/wireless/mt7921"]
 	path = drivers/net/wireless/mt7921
 	url = https://github.com/apriorit/mt7921.git
