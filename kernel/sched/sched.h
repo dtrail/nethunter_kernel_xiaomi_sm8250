@@ -641,10 +641,10 @@ struct cfs_rq {
 	unsigned int		h_nr_runnable;     /* SCHED_{NORMAL,BATCH,IDLE} */
 	unsigned int		h_nr_idle; /* SCHED_IDLE */
 
-	s64			avg_vruntime;
-	u64			avg_load;
-
+	s64			sum_w_vruntime;
+	u64			sum_weight;
 	u64			zero_vruntime;
+	unsigned int		sum_shift;
 
 	struct rb_root_cached	tasks_timeline;
 
@@ -1158,9 +1158,6 @@ struct rq {
 	u64			idle_stamp;
 	u64			avg_idle;
 
-	unsigned long		wake_stamp;
-	u64			wake_avg_idle;
-
 	/* This is used to determine avg_idle's max value */
 	u64			max_idle_balance_cost;
 #endif /* CONFIG_SMP */
@@ -1423,6 +1420,8 @@ static inline struct cfs_rq *group_cfs_rq(struct sched_entity *grp)
 	return NULL;
 }
 #endif /* CONFIG_FAIR_GROUP_SCHED */
+
+extern void update_rq_avg_idle(struct rq *rq);
 
 extern void update_rq_clock(struct rq *rq);
 
@@ -2384,6 +2383,10 @@ static inline int hrtick_enabled(struct rq *rq)
 }
 
 void hrtick_start(struct rq *rq, u64 delay);
+static inline bool hrtick_active(struct rq *rq)
+{
+	return hrtimer_active(&rq->hrtick_timer);
+}
 
 #else
 

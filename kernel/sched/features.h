@@ -33,7 +33,7 @@
  * wakeup-preemption), since its likely going to consume data we
  * touched, increases cache locality.
  */
-#define SCHED_FEAT_NEXT_BUDDY 1
+#define SCHED_FEAT_NEXT_BUDDY 0
 
 /*
  * Allow completely ignoring cfs_rq->next; which can be set from various
@@ -62,6 +62,8 @@
 #define SCHED_FEAT_DELAY_DEQUEUE 1
 #define SCHED_FEAT_DELAY_ZERO 1
 
+#define SCHED_FEAT_PARANOID_AVG 0
+
 /*
  * Allow wakeup-time preemption of the current task:
  */
@@ -79,11 +81,6 @@
  * using the scheduler IPI. Reduces rq->lock contention/bounces.
  */
 #define SCHED_FEAT_TTWU_QUEUE 0
-
-/*
- * When doing wakeups, attempt to limit superfluous scans of the LLC domain.
- */
-#define SCHED_FEAT_SIS_PROP 1
 
 /*
  * Issue a WARN when we do multiple update_rq_clock() calls
@@ -162,3 +159,4 @@
  * Do newidle balancing proportional to its success rate using randomization.
  */
 #define SCHED_FEAT_NI_RANDOM 1
+#define SCHED_FEAT_NI_RATE 1

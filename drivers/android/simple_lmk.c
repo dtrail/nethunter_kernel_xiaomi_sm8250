@@ -5,6 +5,7 @@
 
 #define pr_fmt(fmt) "simple_lmk: " fmt
 
+#include <linux/delay.h>
 #include <linux/freezer.h>
 #include <linux/kthread.h>
 #include <linux/mm.h>
@@ -279,13 +280,13 @@ static void scan_and_kill(void)
 			set_tsk_thread_flag(t, TIF_MEMDIE);
 		for_each_thread(vtsk, t)
 			set_task_rt_prio(t, 1);
+		/* Signals can't wake frozen tasks; only a thaw operation can */
+		for_each_thread(vtsk, t)
+			__thaw_task(t);
 		rcu_read_unlock();
 
 		/* Allow the victim to run on any CPU. This won't schedule. */
 		set_cpus_allowed_ptr(vtsk, cpu_all_mask);
-
-		/* Signals can't wake frozen tasks; only a thaw operation can */
-		__thaw_task(vtsk);
 
 		/* Store the number of anon pages to sort victims for reaping */
 		victim->size = get_mm_counter(mm, MM_ANONPAGES);
@@ -310,6 +311,8 @@ static void scan_and_kill(void)
 	/* Wait until all the victims die or until the timeout is reached */
 	if (!wait_for_completion_timeout(&reclaim_done, RECLAIM_EXPIRES))
 		pr_info("Timeout hit waiting for victims to die, proceeding\n");
+	else
+		msleep(28);
 
 	/* Clean up for future reclaims but let the reaper thread keep going */
 	write_lock(&mm_free_lock);
