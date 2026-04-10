@@ -236,6 +236,10 @@ static inline unsigned long apply_dvfs_headroom(unsigned long util, int cpu)
         if (util >= capacity)
                 return util;
 
+        /* Cut-off dvfs headroom if util is under 6.25% of capacity */
+        if (util < (capacity >> 4))
+                return util;
+
         /*
          * Quadratic taper the boosting at the top end as these are expensive
          * and we don't need that much of a big headroom as we approach max
