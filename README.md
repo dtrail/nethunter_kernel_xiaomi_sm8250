@@ -1,4 +1,7 @@
 # Apollo / Alioth N0tHunter Kernel [4.19][AOSP]
+``
+*NOTE*: N0tHunter-Lite is in preparation. It won't include any NetHunter support and is aimed at users who just want to use my optimizations and modules on their daily driver.
+``
 
 - For Kali NetHunter 2025.X
 - Tested on Android 13 - 16 AOSP-Roms (specifically tested on LineageOS 21 - 22.2)
