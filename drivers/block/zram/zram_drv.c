@@ -1153,10 +1153,6 @@ static ssize_t max_comp_streams_store(struct device *dev,
 
 static void comp_algorithm_set(struct zram *zram, u32 prio, const char *alg)
 {
-	/* Do not free statically defined compression algorithms */
-	if (zram->comp_algs[prio] != default_compressor)
-		kfree(zram->comp_algs[prio]);
-
 	zram->comp_algs[prio] = alg;
 }
 
@@ -1173,35 +1169,25 @@ static ssize_t __comp_algorithm_show(struct zram *zram, u32 prio, char *buf)
 
 static int __comp_algorithm_store(struct zram *zram, u32 prio, const char *buf)
 {
-	char *compressor;
+	const char *alg;
 	size_t sz;
 
 	sz = strlen(buf);
 	if (sz >= ZRAM_MAX_ALGO_NAME_SZ)
 		return -E2BIG;
 
-	compressor = kstrdup(buf, GFP_KERNEL);
-	if (!compressor)
-		return -ENOMEM;
-
-	/* ignore trailing newline */
-	if (sz > 0 && compressor[sz - 1] == '\n')
-		compressor[sz - 1] = 0x00;
-
-	if (!zcomp_available_algorithm(compressor)) {
-		kfree(compressor);
+	alg = zcomp_lookup_backend_name(buf);
+	if (!alg)
 		return -EINVAL;
-	}
 
 	down_write(&zram->init_lock);
 	if (init_done(zram)) {
 		up_write(&zram->init_lock);
-		kfree(compressor);
 		pr_info("Can't change algorithm for initialized device\n");
 		return -EBUSY;
 	}
 
-	comp_algorithm_set(zram, prio, compressor);
+	comp_algorithm_set(zram, prio, alg);
 	up_write(&zram->init_lock);
 	return 0;
 }
@@ -1281,6 +1267,12 @@ static ssize_t algorithm_params_store(struct device *dev,
 		}
 	}
 
+	down_write(&zram->init_lock);
+	if (init_done(zram)) {
+		ret = -EBUSY;
+		goto unlock;
+	}
+
 	/* Lookup priority by algorithm name */
 	if (algo) {
 		s32 p;
@@ -1297,11 +1289,18 @@ static ssize_t algorithm_params_store(struct device *dev,
 		}
 	}
 
-	if (prio < ZRAM_PRIMARY_COMP || prio >= ZRAM_MAX_COMPS)
-		return -EINVAL;
+	if (prio < ZRAM_PRIMARY_COMP || prio >= ZRAM_MAX_COMPS) {
+		ret = -EINVAL;
+		goto unlock;
+	}
 
 	ret = comp_params_store(zram, prio, level, dict_path);
+	up_write(&zram->init_lock);
 	return ret ? ret : len;
+
+unlock:
+	up_write(&zram->init_lock);
+	return ret;
 }
 
 static ssize_t comp_algorithm_show(struct device *dev,
@@ -2234,7 +2233,7 @@ static void zram_bio_discard(struct zram *zram, struct bio *bio)
 	 */
 	if (offset) {
 		if (n <= (PAGE_SIZE - offset))
-			return;
+			goto end_bio;
 
 		n -= (PAGE_SIZE - offset);
 		index++;
@@ -2249,6 +2248,7 @@ static void zram_bio_discard(struct zram *zram, struct bio *bio)
 		n -= PAGE_SIZE;
 	}
 
+end_bio:
 	bio_endio(bio);
 }
 
@@ -2389,12 +2389,8 @@ static void zram_destroy_comps(struct zram *zram)
 		zram->num_active_comps--;
 	}
 
-	for (prio = ZRAM_PRIMARY_COMP; prio < ZRAM_MAX_COMPS; prio++) {
-		/* Do not free statically defined compression algorithms */
-		if (zram->comp_algs[prio] != default_compressor)
-			kfree(zram->comp_algs[prio]);
+	for (prio = ZRAM_PRIMARY_COMP; prio < ZRAM_MAX_COMPS; prio++)
 		zram->comp_algs[prio] = NULL;
-	}
 
 	zram_comp_params_reset(zram);
 }
