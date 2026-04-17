@@ -149,3 +149,4 @@ arch/arm64/configs/nethunter_defconfig.new
 dtbo_build.sh
 arch/arm64/configs/nethunter_defconfig
 drivers/misc/nethunter_kernel_xiaomi_sm8250.code-workspace
+Chimera_module_v6.5-Magisk.zip:Zone.Identifier
